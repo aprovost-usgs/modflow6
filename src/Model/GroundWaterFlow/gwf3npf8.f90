@@ -367,7 +367,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
     ! -- local
-    integer(I4B) :: i, nnbrs, nbrxmax
+    integer(I4B) :: i, nnbrs
     ! -- formats
     ! -- data
 ! ------------------------------------------------------------------------------
@@ -514,7 +514,6 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) :: n, m, ii, iis
-    integer(I4B) :: i, il, ig, iil, ilp1
 ! ------------------------------------------------------------------------------
     !
     ! -- Update amat and rhs for flow formulation
@@ -820,7 +819,7 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: rhs
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: m, idiag, ihc, iil, iilp1
+    integer(I4B) :: m, idiag, ihc
     integer(I4B) :: isymcon, idiagm
     real(DP) :: hyn, hym
     real(DP) :: cond

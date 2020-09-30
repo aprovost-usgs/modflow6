@@ -227,7 +227,7 @@ module GwfHfbModule
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
     integer(I4B) ::  nodes, nja
-    integer(I4B) :: ihfb, n, m, ii, iis, il, ig, ilp1
+    integer(I4B) :: ihfb, n, m, ii, iis
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon
     integer(I4B) :: ixt3d

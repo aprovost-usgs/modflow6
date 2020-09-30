@@ -218,7 +218,7 @@ module GwtDspModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
-    integer(I4B) :: i, nnbrs, nbrxmax
+    integer(I4B) :: i, nnbrs
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
@@ -386,7 +386,6 @@ module GwtDspModule
     real(DP),intent(inout),dimension(nodes) :: cnew
     ! -- local
     integer(I4B) :: n, m, ii, iis
-    integer(I4B) :: i, il, ig, iil, ilp1
 ! ------------------------------------------------------------------------------
     !
     ! -- Update amat and rhs for dispersion formulation
@@ -415,13 +414,13 @@ module GwtDspModule
         if (this%inonstdf == 0) then
           !
           ! -- Standard dispersion formulation
-          call this%stddisp_fc(n, ii, njasln, amatsln, idxglo, rhs)
+          call this%stddisp_fc(n, ii, njasln, amatsln, idxglo)
           !
         else
           !
           ! -- Standard dispersion formulation
           if (this%idispform(iis) == 0)                                          &
-             call this%stddisp_fc(n, ii, njasln, amatsln, idxglo, rhs)
+             call this%stddisp_fc(n, ii, njasln, amatsln, idxglo)
           !
           ! -- XT3D formulation
           if (this%idispform(iis) == 1)                                          &
@@ -480,7 +479,7 @@ module GwtDspModule
     return
   end subroutine dsp_flowja
  
-  subroutine stddisp_fc(this, n, ipos, njasln, amatsln, idxglo, rhs)
+  subroutine stddisp_fc(this, n, ipos, njasln, amatsln, idxglo)
 ! ******************************************************************************
 ! stdcond_fc -- Formulate a connection
 ! ******************************************************************************
@@ -495,9 +494,8 @@ module GwtDspModule
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amatsln
     integer(I4B),intent(in),dimension(:) :: idxglo
-    real(DP),intent(inout),dimension(:) :: rhs
     ! -- local
-    integer(I4B) :: m, idiag, idiagm, isympos, isymcon, iil, iilp1
+    integer(I4B) :: m, idiag, idiagm, isympos, isymcon
     real(DP) :: dnm
  ! ------------------------------------------------------------------------------
     !

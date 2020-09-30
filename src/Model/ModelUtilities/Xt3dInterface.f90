@@ -152,7 +152,7 @@ module Xt3dModule
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
     integer(I4B) :: i, j, k, jj, kk, iglo, kglo, iadded, jjs
-    integer(I4B) :: niax, njax, ipos, ierror, nnbrs
+    integer(I4B) :: niax, njax, ipos, nnbrs
 ! ------------------------------------------------------------------------------
     !
     ! -- If not rhs, add connections
@@ -342,7 +342,7 @@ module Xt3dModule
     integer(I4B), dimension(:), intent(in), pointer, &
       contiguous, optional :: icelltype
     ! -- local
-    integer(I4B) :: n, nnbrs
+    integer(I4B) :: n
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       "(1x, /1x, 'XT3D is active.'//)"
@@ -435,7 +435,6 @@ module Xt3dModule
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10
-    integer(I4B) :: il01p1, il10p1
     integer(I4B) :: m
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
@@ -692,7 +691,6 @@ module Xt3dModule
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10, il
-    integer(I4B) :: il01p1, il10p1
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP),dimension(this%nbrmax,3) :: vc0, vn0, vc1, vn1
