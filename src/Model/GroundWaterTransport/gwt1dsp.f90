@@ -131,27 +131,27 @@ module GwtDspModule
     ! -- Read dispersion options
     call this%read_options()
     !
-    ! -- xt3d create
-    if(this%ixt3d > 0) then
+    ! -- If a non-standard flow formulation is active, temporarily allocate
+    !    and initialize idispform so it is available before the call to dsp_ac
+    if (this%inonstdf /= 0) then
+      allocate(this%idispform(this%dis%njas))
+      this%idispform = 0
+    end if
+    !
+    ! -- xt3d create and define
+    if(this%ixt3d /= 0) then
       call xt3d_cr(this%xt3d, this%name_model, this%inunit, this%iout,       &
                    ldispopt=.true.)
       this%xt3d%ixt3d = this%ixt3d
-    endif
-    !
-    ! -- If xt3d active:
-    !    Temporarily allocate and initialize idispform array. Read the xt3d
-    !    data block if necessary to set idispform, otherwise set it to 1.    ! amp_note: doing this here because we need to know idispform array before call to _ac
-    !    Call xt3d_df.
-    if (this%ixt3d /= 0) then     ! kluge note: can move this into the if block above
-      allocate(this%idispform(this%dis%njas))
-      this%idispform = 0
+      ! -- Read the xt3d data block if necessary to set idispform, otherwise
+      !    set it to 1.
       if (this%xt3dbyconn) then
         call this%read_xt3d_data(.true.)
       else
         this%idispform = 1
       end if
       call this%xt3d%xt3d_df(dis,this%idispform)
-    end if
+    endif
     !
     ! -- Return
     return
@@ -391,8 +391,6 @@ module GwtDspModule
     !
     ! -- Update amat and rhs for dispersion formulation
     !
-!!    this%xt3d%lamatsaved = .false.       ! kluge to debug and test
-!!    !
     ! -- Apply any saved coefficient updates
     if(this%ixt3d /= 0)                                                        &
       call this%xt3d%xt3d_amatsaved_fc(njasln, amatsln, idxglo)

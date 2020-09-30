@@ -195,10 +195,6 @@ module GwfNpfModule
     call this%read_options()
     call this%check_options()
     !
-    ! -- Save pointer to xt3d object
-    this%xt3d => xt3d
-    if (this%ixt3d /= 0) xt3d%ixt3d = this%ixt3d
-    !
     ! -- Check whether a non-standard flow formulation and GNC are both active,
     !    and if so, warn
     if (this%inonstdf /= 0 .and. ingnc > 0) then
@@ -208,20 +204,27 @@ module GwfNpfModule
         'any connections for which both are specified.'    ! amp_note: say which formulation???
     end if
     !
-    ! -- If xt3d active:
-    !    Temporarily allocate and initialize iflowform array. Read the xt3d
-    !    data block if necessary to set iflowform, otherwise set it to 1.    ! amp_note: doing this here because we need to know iflowform array before call to _ac
-    !    Call xt3d_df.
-    if (this%ixt3d /= 0) then
+    ! -- If a non-standard flow formulation is active, temporarily allocate
+    !    and initialize iflowform so it is available before the call to npf_ac
+    if (this%inonstdf /= 0) then
       allocate(this%iflowform(this%dis%njas))
       this%iflowform = 0
+    end if
+    !
+    ! -- Save pointer to xt3d object
+    this%xt3d => xt3d
+    ! -- xt3d define
+    if(this%ixt3d /= 0) then
+      xt3d%ixt3d = this%ixt3d
+      ! -- Read the xt3d data block if necessary to set iflowform, otherwise
+      !    set it to 1.
       if (this%xt3dbyconn) then
         call this%read_xt3d_data(.true.)
       else
         this%iflowform = 1
       end if
       call this%xt3d%xt3d_df(dis,this%iflowform)
-    end if
+    endif
     !
     ! -- Return
     return
@@ -516,8 +519,6 @@ module GwfNpfModule
     !
     ! -- Update amat and rhs for flow formulation
     !
-!!    this%xt3d%lamatsaved = .false.       ! kluge to debug and test
-!!    !
     ! -- Apply any saved coefficient updates
     if(this%ixt3d /= 0) call this%xt3d%xt3d_amatsaved_fc(njasln, amat, idxglo)
     !
@@ -833,7 +834,6 @@ module GwfNpfModule
 !!    if(m < n) return
     if(m < n) then
       print *,"stdcond_fc should not be called for m < n"   ! amp_note: because perched calc assumes m > n???
-!!      pause                                                 ! kluge
       stop                                                  ! kluge
     end if
     !
