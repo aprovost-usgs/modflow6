@@ -285,7 +285,7 @@ module GwfHfbModule
         endif
         ! -- Make hfb corrections for xt3d
         call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo,      &
-          rhs, hnew, n, m, condhfb)
+          rhs, hnew, n, ii, condhfb)
       end do
     end if
     !

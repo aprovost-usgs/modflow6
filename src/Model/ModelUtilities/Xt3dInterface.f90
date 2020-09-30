@@ -666,7 +666,7 @@ module Xt3dModule
   end subroutine xt3d_fcpc
 
   subroutine xt3d_fhfb(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew, &
-    n, m, condhfb)
+    n, ii, condhfb)
 ! ******************************************************************************
 ! xt3d_fhfb -- Formulate HFB correction
 ! ******************************************************************************
@@ -681,7 +681,7 @@ module Xt3dModule
     integer(I4B),intent(in) :: nodes
     integer(I4B),intent(in) :: nja
     integer(I4B),intent(in) :: njasln
-    integer(I4B) :: n, m
+    integer(I4B) :: n, ii
     real(DP),dimension(njasln),intent(inout) :: amat
     integer(I4B),intent(in),dimension(nja) :: idxglo
     real(DP),intent(inout),dimension(nodes) :: rhs
@@ -690,7 +690,7 @@ module Xt3dModule
     ! -- local
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
-    integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10, il
+    integer(I4B) :: m, il0, ii01, jjs01, il01, il10, ii00, ii11, ii10, il
     integer(I4B),dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP),dimension(this%nbrmax,3) :: vc0, vn0, vc1, vn1
@@ -710,13 +710,9 @@ module Xt3dModule
     call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n,    &
       ck0, allhc0)
     !
-    ! -- Find local neighbor number of cell 1.
-    do il = 1,nnbr0
-      if (inbr0(il).eq.m) then     ! amp_note: better to pass in ipos (ii in calling subroutine) instead of m???
-        il0 = il
-        exit
-      end if
-    end do
+    ! -- Get neighbor's node number and local neighbor number
+    m = this%dis%con%ja(ii)
+    il0 = ii - this%dis%con%ia(n)
     !
     nnbr1 = this%dis%con%ia(m+1) - this%dis%con%ia(m) - 1
     ! -- Load conductivity and connection info for cell 1.
