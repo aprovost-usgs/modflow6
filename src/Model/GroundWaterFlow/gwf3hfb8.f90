@@ -245,10 +245,10 @@ module GwfHfbModule
     end if
     !
     ! -- Fill amat and/or rhs for XT3D connections
-    if(ixt3d /= 0) then      ! amp_note: will need to add cases if other flow formulations are added
+    if(ixt3d /= 0) then
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
-        m = max(this%noden(ihfb), this%nodem(ihfb))     ! amp_note: don't want an m<n check here
+        m = max(this%noden(ihfb), this%nodem(ihfb))
         ! -- Skip if XT3D not used for this connection
         ii = this%dis%con%getjaindex(n, m)
         iis = this%dis%con%jas(ii)
@@ -288,6 +288,7 @@ module GwfHfbModule
           rhs, hnew, n, ii, condhfb)
       end do
     end if
+    ! -- Will need to add cases if other flow formulations are added
     !
     ! -- Fill amat for non-XT3D, non-Newton, convertible connections.
     !    (For Newton, and for confined connections, the effect of the 
@@ -385,7 +386,7 @@ module GwfHfbModule
     end if
     !
     ! -- Recalculate flowja for XT3D connections
-    if(ixt3d /= 0) then      ! amp_note: will need to add cases if other flow formulations are added
+    if(ixt3d /= 0) then
       do ihfb = 1, this%nhfb
         n = min(this%noden(ihfb), this%nodem(ihfb))
         m = max(this%noden(ihfb), this%nodem(ihfb))
@@ -427,6 +428,7 @@ module GwfHfbModule
         call this%xt3d%xt3d_flowjahfb(n, m, hnew, flowja, condhfb)
       end do
     end if
+    ! -- Will need to add cases if other flow formulations are added
     !
     ! -- Recalculate flowja for non-XT3D, non-newton, convertible connections
     if(this%inewton == 0) then

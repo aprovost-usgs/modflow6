@@ -446,6 +446,8 @@ module Xt3dModule
     real(DP) :: qnm, qnbrs
 ! ------------------------------------------------------------------------------
     !
+    ! -- Formulate an XT3D connection
+    !
     ! -- Skip if all connections for node n are permanently confined
     if (this%lamatsaved) then
       if (this%iallpc(n) == 1) return
@@ -457,8 +459,6 @@ module Xt3dModule
     ! -- Get neighbor's node number
     m = this%dis%con%ja(ipos)
     !
-!!    ! -- Skip if neighbor m is inactive or has lower cell number.
-!!    if ((this%ibound(m).eq.0).or.(m.lt.n)) return     ! amp_note: check for m<n now done in calling routine loop
     ! -- Skip if neighbor m is inactive.
     if (this%ibound(m).eq.0) return
     !
@@ -796,7 +796,7 @@ module Xt3dModule
     return
   end subroutine xt3d_fhfb
 
-  subroutine xt3d_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fn(this, n, ipos, njasln, amat, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! xt3d_fn -- Fill Newton terms for xt3d
 ! ******************************************************************************
@@ -807,17 +807,15 @@ module Xt3dModule
     use SmoothingModule, only: sQuadraticSaturationDerivative
     ! -- dummy
     class(Xt3dType) :: this
-    integer(I4B) :: kiter
-    integer(I4B),intent(in) :: nodes
-    integer(I4B),intent(in) :: nja
+    integer(I4B),intent(in) :: n, ipos
     integer(I4B),intent(in) :: njasln
     real(DP),dimension(njasln),intent(inout) :: amat
-    integer(I4B),intent(in),dimension(nja) :: idxglo
-    real(DP),intent(inout),dimension(nodes) :: rhs
-    real(DP),intent(inout),dimension(nodes) :: hnew
+    integer(I4B),intent(in),dimension(:) :: idxglo
+    real(DP),intent(inout),dimension(:) :: rhs
+    real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n, m, ipos, isympos
-    !
+    integer(I4B) :: nodes, nja
+    integer(I4B) :: m
     integer(I4B) :: nnbr0
     integer(I4B) :: il0, ii01, jjs01, il01, il10, ii00, ii11, ii10
     integer(I4B),dimension(this%nbrmax) :: inbr0
@@ -825,77 +823,82 @@ module Xt3dModule
     real(DP) :: topup, botup, derv, term, termrhs
 ! ------------------------------------------------------------------------------
     !
-    ! -- Update amat and rhs with Newton terms
-    do n = 1, nodes
-      ! -- Skip if inactive.
-      if (this%ibound(n).eq.0) cycle
-      ! -- No Newton correction if amat saved (which implies no rhs option)
-      ! -- and all connections for the cell are permanently confined.
-      if (this%lamatsaved) then
-        if (this%iallpc(n) == 1) cycle
-      end if
-      nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
-      ! -- Load neighbors of cell. Set cell numbers for inactive
-      ! -- neighbors to zero.
-      call this%xt3d_load_inbr(n, nnbr0, inbr0)
-      ! -- Loop over active neighbors of cell 0 that have a higher
-      ! -- cell number (taking advantage of reciprocity).
-      do il0 = 1,nnbr0
-        ipos = this%dis%con%ia(n) + il0
-        ! -- Skip if xt3d not used for this connection.
-        isympos = this%dis%con%jas(ipos)
-        if (this%iflowform(isympos) /= 1) cycle
-        if (this%dis%con%mask(ipos) == 0) cycle
-        !
-        m = inbr0(il0)
-        ! -- Skip if neighbor is inactive or has lower cell number.
-        if ((inbr0(il0).eq.0).or.(m.lt.n)) cycle     ! amp_note: if loops get moved out to calling routine, do m<n check there
-        ! -- Set various indices.
-        call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10,          &
-          ii00, ii11, ii10)
-        ! determine upstream node
-        iups = m
-        if (hnew(m) < hnew(n)) iups = n
-        idn = n
-        if (iups == n) idn = m
-        ! -- no Newton terms if upstream cell is confined
-        !    and no rhs option
-        if ((this%icelltype(iups) == 0).and.(this%ixt3d == 1)) cycle
-        ! -- Set the upstream top and bot, and then recalculate for a
-        !    vertically staggered horizontal connection
-        topup = this%dis%top(iups)
-        botup = this%dis%bot(iups)
-        if(this%dis%con%ihc(jjs01) == 2) then
-          topup = min(this%dis%top(n), this%dis%top(m))
-          botup = max(this%dis%bot(n), this%dis%bot(m))
-        endif
-        ! derivative term
-        derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups))
-        term = this%qsat(ii01) * derv
-        if (this%ixt3d == 1) then
-           termrhs = term
-        else
-           termrhs = term - this%qrhs(ii01)
-        endif
-        ! fill Jacobian for n being the upstream node
-        if (iups == n) then
-          ! fill in row of n
-          amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
-          rhs(n) = rhs(n) + termrhs * hnew(n)
-          ! fill in row of m
-          amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
-          rhs(m) = rhs(m) - termrhs * hnew(n)
-        ! fill Jacobian for m being the upstream node
-        else
-          ! fill in row of n
-          amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
-          rhs(n) = rhs(n) + termrhs * hnew(m)
-          ! fill in row of m
-          amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
-          rhs(m) = rhs(m) - termrhs * hnew(m)
-        end if
-      enddo
-    enddo
+    ! -- Update amat and rhs with Newton terms for XT3D
+    !
+    ! -- No Newton correction if amat saved (which implies no rhs option)
+    ! -- and all connections for the cell are permanently confined.
+    if (this%lamatsaved) then
+      if (this%iallpc(n) == 1) return
+    end if
+    !
+    ! -- Skip if cell n is inactive.
+    if (this%ibound(n).eq.0) return
+    !
+    ! -- Get neighbor's node number
+    m = this%dis%con%ja(ipos)
+    !
+    ! -- Skip if neighbor m is inactive.
+    if (this%ibound(m).eq.0) return
+    !
+    ! -- Set local dimension variables for convenience
+    nodes = this%dis%nodes
+    nja = this%dis%con%nja
+    !
+    nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
+    ! -- Load neighbors of cell. Set cell numbers for inactive
+    ! -- neighbors to zero.
+    call this%xt3d_load_inbr(n, nnbr0, inbr0)
+    !
+    ! -- Set various indices.
+    il0 = ipos - this%dis%con%ia(n)
+    call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10,          &
+      ii00, ii11, ii10)
+    !
+    ! determine upstream node
+    iups = m
+    if (hnew(m) < hnew(n)) iups = n
+    idn = n
+    if (iups == n) idn = m
+    !
+    ! -- no Newton terms if upstream cell is confined
+    !    and no rhs option
+    if ((this%icelltype(iups) == 0).and.(this%ixt3d == 1)) return
+    !
+    ! -- Set the upstream top and bot, and then recalculate for a
+    !    vertically staggered horizontal connection
+    topup = this%dis%top(iups)
+    botup = this%dis%bot(iups)
+    if(this%dis%con%ihc(jjs01) == 2) then
+      topup = min(this%dis%top(n), this%dis%top(m))
+      botup = max(this%dis%bot(n), this%dis%bot(m))
+    endif
+    !
+    ! derivative term
+    derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups))
+    term = this%qsat(ii01) * derv
+    if (this%ixt3d == 1) then
+       termrhs = term
+    else
+       termrhs = term - this%qrhs(ii01)
+    endif
+    !
+    ! fill Jacobian for n being the upstream node
+    if (iups == n) then
+      ! fill in row of n
+      amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
+      rhs(n) = rhs(n) + termrhs * hnew(n)
+      ! fill in row of m
+      amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
+      rhs(m) = rhs(m) - termrhs * hnew(n)
+    ! fill Jacobian for m being the upstream node
+    else
+      ! fill in row of n
+      amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
+      rhs(n) = rhs(n) + termrhs * hnew(m)
+      ! fill in row of m
+      amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
+      rhs(m) = rhs(m) - termrhs * hnew(m)
+    end if
     !
     ! -- Return
     return

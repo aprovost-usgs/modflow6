@@ -325,7 +325,7 @@ module GwtDspModule
     ! -- Calculate xt3d coefficients if flow solution has changed
     !    Force iflwchng to be 1 for the very first iteration just in case
     !    there is no advection so that the xt3d_fcpc routine is called
-    if (this%ixt3d > 0) then         ! amp_note: will need to generalize & modify if more dispersion formulations are added
+    if (this%ixt3d > 0) then
       iflwchng = 0
       if (kper*kstp*kiter == 1) then
         iflwchng = 1
@@ -347,6 +347,8 @@ module GwtDspModule
           enddo
         enddo nodeloop
       endif
+      ! -- Will need to generalize & modify if more dispersion formulations
+      !    are added
       !
       ! -- If flow has changed, then update coefficients
       if (iflwchng == 1) then
@@ -419,12 +421,14 @@ module GwtDspModule
         else
           !
           ! -- Standard dispersion formulation
-          if (this%idispform(iis) == 0)                                          &
+          if (this%idispform(iis) == 0) then
              call this%stddisp_fc(n, ii, njasln, amatsln, idxglo)
           !
           ! -- XT3D formulation
-          if (this%idispform(iis) == 1)                                          &
+          else if (this%idispform(iis) == 1) then
              call this%xt3d%xt3d_fc(n, ii, njasln, amatsln, idxglo, rhs, cnew)
+          !
+          end if
           !
         end if
         !
@@ -504,7 +508,6 @@ module GwtDspModule
     isympos = this%dis%con%jas(ipos)
     !
     m = this%dis%con%ja(ipos)
-!!    if (m < n) return   ! amp_note: check for m<n now done in calling routine loop
     if(this%fmi%ibdgwfsat0(m) == 0) return
     dnm = this%dispcoef(isympos)
     !
@@ -731,7 +734,7 @@ module GwtDspModule
             this%inonstdf = 1
             do isubopt=1,3
               call this%parser%GetStringCaps(keyword)
-              if(keyword == 'RHS') then    ! amp_note: RHS option was not previously programmed - verify that there's no harm in having it for DSP
+              if(keyword == 'RHS') then
                 this%ixt3d = 2
                 write(this%iout, '(8x,a)')                                     &
                                  'XT3D RHS OPTION IS SELECTED.'
@@ -958,12 +961,12 @@ module GwtDspModule
       !
       ! -- cellidn (read as cellid and convert to user node)
       call this%parser%GetCellid(this%dis%ndim, cellidn)
-      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
+      ! -- convert user node to reduced node number
       n = this%dis%noder_from_cellid(cellidn, &
                                        this%parser%iuactive, this%iout)
       ! -- cellidm (read as cellid and convert to user node)
       call this%parser%GetCellid(this%dis%ndim, cellidm)
-      ! -- convert user node to reduced node number     ! amp_note: confirm that conversion is appropriate here
+      ! -- convert user node to reduced node number
       m = this%dis%noder_from_cellid(cellidm, &
                                        this%parser%iuactive, this%iout)
       ! -- set idispform flag for connection to 1
