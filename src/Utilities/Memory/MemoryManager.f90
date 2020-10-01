@@ -28,6 +28,7 @@ module MemoryManagerModule
   public :: mem_write_usage
   public :: mem_da
   public :: mem_set_print_option
+  public :: get_from_memorylist
   
   public :: get_mem_type
   public :: get_mem_rank
@@ -35,6 +36,8 @@ module MemoryManagerModule
   public :: get_mem_shape
   public :: get_isize
   public :: copy_dbl1d
+
+  public :: memorylist
   
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
