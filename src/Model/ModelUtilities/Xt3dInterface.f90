@@ -904,7 +904,7 @@ module Xt3dModule
     return
   end subroutine xt3d_fn
 
-  subroutine xt3d_flowja(this, hnew, flowja)
+  subroutine xt3d_flowja(this, n, ipos, hnew, flowja)
 ! ******************************************************************************
 ! xt3d_flowja -- Budget
 ! ******************************************************************************
@@ -914,10 +914,11 @@ module Xt3dModule
     use Xt3dAlgorithmModule, only: qconds
     ! -- dummy
     class(Xt3dType) :: this
+    integer(I4B) :: n, ipos
     real(DP),intent(inout),dimension(:) :: hnew
     real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n, ipos, m, nodes, isympos
+    integer(I4B) :: m, nodes
     real(DP) :: qnm, qnbrs
     logical :: allhc0, allhc1
     integer(I4B) :: nnbr0, nnbr1
@@ -931,55 +932,59 @@ module Xt3dModule
     real(DP),dimension(this%nbrmax) :: chati0, chat1j
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate the flow across each cell face and store in flowja
+    ! -- Calculate the flow across an XT3D connection and store in flowja
+    !
+    ! -- Skip if cell n is inactive.
+    if (this%ibound(n).eq.0) return
+    !
+    ! -- Get neighbor's node number
+    m = this%dis%con%ja(ipos)
+    !
+    ! -- Skip if neighbor m is inactive.
+    if (this%ibound(m).eq.0) return
+    !
+    ! -- Set local dimension variable for convenience
     nodes = this%dis%nodes
-    do n = 1, nodes
-      ! -- Skip if inactive.
-      if (this%ibound(n).eq.0) cycle
-      nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
-      ! -- Load conductivity and connection info for cell 0.
-      call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n,      &
-        ck0, allhc0)
-      ! -- Loop over active neighbors of cell 0 that have a higher
-      ! -- cell number (taking advantage of reciprocity).
-      do il0 = 1,nnbr0
-        ! -- Skip if xt3d not used for this connection.
-        ipos = this%dis%con%ia(n) + il0
-        isympos = this%dis%con%jas(ipos)
-        if (this%iflowform(isympos) /= 1) cycle
-        !
-        m = inbr0(il0)
-        ! -- Skip if neighbor is inactive or has lower cell number.
-        if ((inbr0(il0).eq.0).or.(m.lt.n)) cycle   ! amp_note: if loops get moved out to calling routine, do m<n check there
-        nnbr1 = this%dis%con%ia(m+1) - this%dis%con%ia(m) - 1
-        ! -- Load conductivity and connection info for cell 1.
-        call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n,     &
-          ck1, allhc1)
-        ! -- Set various indices.
-        call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10,           &
-          ii00, ii11, ii10)
-        ! -- Compute areas.
-        if (this%inewton /= 0)                                               &
-          call this%xt3d_areas(nodes, n, m, jjs01, .true., ar01, ar10, hnew)
-        call this%xt3d_areas(nodes, n, m, jjs01, .false., ar01, ar10, hnew)
-        ! -- Compute "conductances" for interface between
-        ! -- cells 0 and 1.
-        call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
-          ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
-          this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
-        ! -- Contribution to flow from primary connection.
-        qnm = chat01*(hnew(m) - hnew(n))
-        ! -- Contribution from immediate neighbors of node 0.
-        call this%xt3d_qnbrs(nodes, n, m, nnbr0, inbr0, chati0, hnew, qnbrs)
-        qnm = qnm + qnbrs
-        ! -- Contribution from immediate neighbors of node 1.
-        call this%xt3d_qnbrs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, qnbrs)
-        qnm = qnm - qnbrs
-        ipos = ii01
-        flowja(ipos) = flowja(ipos) + qnm
-        flowja(this%dis%con%isym(ipos)) = flowja(this%dis%con%isym(ipos)) - qnm        
-      enddo
-    enddo
+    !
+    ! -- Get number of neighbors for node n (locally, "cell 0")
+    nnbr0 = this%dis%con%ia(n+1) - this%dis%con%ia(n) - 1
+    ! -- Load conductivity and connection info for cell 0.
+    call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n,   &
+      ck0, allhc0)
+    !
+    ! -- Get number of neighbors for node m (locally, "cell 1")
+    nnbr1 = this%dis%con%ia(m+1) - this%dis%con%ia(m) - 1
+    ! -- Load conductivity and connection info for cell 1.
+    call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n,    &
+      ck1, allhc1)
+    !
+    ! -- Set various indices.
+    il0 = ipos - this%dis%con%ia(n)
+    call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10,          &
+      ii00, ii11, ii10)
+    !
+    ! -- Compute areas.
+    if (this%inewton /= 0)                                               &
+      call this%xt3d_areas(nodes, n, m, jjs01, .true., ar01, ar10, hnew)
+    call this%xt3d_areas(nodes, n, m, jjs01, .false., ar01, ar10, hnew)
+    !
+    ! -- Compute "conductances" for interface between
+    ! -- cells 0 and 1.
+    call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n,    &
+      ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10,     &
+      this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+    !
+    ! -- Contribution to flow from primary connection.
+    qnm = chat01*(hnew(m) - hnew(n))
+    ! -- Contribution from immediate neighbors of node 0.
+    call this%xt3d_qnbrs(nodes, n, m, nnbr0, inbr0, chati0, hnew, qnbrs)
+    qnm = qnm + qnbrs
+    ! -- Contribution from immediate neighbors of node 1.
+    call this%xt3d_qnbrs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, qnbrs)
+    qnm = qnm - qnbrs
+    ipos = ii01
+    flowja(ipos) = flowja(ipos) + qnm
+    flowja(this%dis%con%isym(ipos)) = flowja(this%dis%con%isym(ipos)) - qnm        
     !
     ! -- Return
     return

@@ -104,6 +104,7 @@ module GwfNpfModule
     procedure                               :: npf_da
     procedure, private                      :: stdcond_fc
     procedure, private                      :: stdcond_fn
+    procedure, private                      :: stdcond_flowja
     procedure, private                      :: thksat     => sgwf_npf_thksat
     procedure, private                      :: qcalc      => sgwf_npf_qcalc
     procedure, private                      :: wd         => sgwf_npf_wetdry
@@ -581,7 +582,7 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: rhs
     real(DP),intent(inout),dimension(:) :: hnew
     ! -- local
-    integer(I4B) :: n,m,ii,iis
+    integer(I4B) :: n, m, ii, iis
 ! ------------------------------------------------------------------------------
     !
     ! -- Add newton terms to solution matrix
@@ -693,30 +694,49 @@ module GwfNpfModule
     real(DP),intent(inout),dimension(:) :: hnew
     real(DP),intent(inout),dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n, ipos, m, isympos
-    real(DP) :: qnm
+    integer(I4B) :: n, m, ii, iis
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow across each cell face and store in flowja
     !
-    if(this%ixt3d /= 0) call this%xt3d%xt3d_flowja(hnew, flowja)
-    !
-    if (.not.this%allnonstdf) then
-      do n = 1, this%dis%nodes
-        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-          ! -- Skip if non-standard flow formulation used for this connection
-          if(this%inonstdf /= 0) then
-            isympos = this%dis%con%jas(ipos)
-            if (this%iflowform(isympos) /= 0) cycle
+    ! -- Loop over rows (nodes)
+    do n = 1, this%dis%nodes
+      !
+      ! -- Loop over connections of node n (columns) and apply the
+      !    the appropriate flow formulations
+      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+!!        if (this%dis%con%mask(ii) == 0) cycle    ! amp_note: what is mask for, and why was it not considered in the orignial npf_flowja loop over nodes???
+        !
+        m = this%dis%con%ja(ii)
+        ! -- Skip if neighbor has lower cell number
+        if (m < n) cycle
+        !
+        iis = this%dis%con%jas(ii)
+        !
+        ! -- If no non-standard conductance formulations used at any
+        !    connections, always use standard conductance formulation.
+        !    Otherwise, use the appropriate formulation for the connection.
+        if (this%inonstdf == 0) then
+          !
+          ! -- Standard conductance formulation
+          call this%stdcond_flowja(n, ii, hnew, flowja)
+          !
+        else
+          !
+          ! -- Standard conductance formulation
+          if (this%iflowform(iis) == 0) then
+             call this%stdcond_flowja(n, ii, hnew, flowja)
+          !
+          ! -- XT3D formulation
+          else if (this%iflowform(iis) == 1) then
+             call this%xt3d%xt3d_flowja(n, ii, hnew, flowja)
+          !
           end if
-          m = this%dis%con%ja(ipos)
-          if(m < n) cycle
-          call this%qcalc(n, m, hnew(n), hnew(m), ipos, qnm)
-          flowja(ipos) = qnm
-          flowja(this%dis%con%isym(ipos)) = -qnm
-        enddo
+          !
+        end if
+        !
       enddo
-    end if
+    enddo
     !
     ! -- Return
     return
@@ -954,6 +974,35 @@ module GwfNpfModule
     ! -- Return
     return
   end subroutine stdcond_fn
+
+  subroutine stdcond_flowja(this, n, ipos, hnew, flowja)
+! ******************************************************************************
+! stdcond_flowja -- Calculate flowja using standard conductance formulation
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfNpfType) :: this
+    integer(I4B) :: n, ipos
+    real(DP),intent(inout),dimension(:) :: hnew
+    real(DP),intent(inout),dimension(:) :: flowja
+    ! -- local
+    integer(I4B) :: m
+    real(DP) :: qnm
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate the flow across a standard conductance connection and store
+    !    in flowja
+    !
+    m = this%dis%con%ja(ipos)
+    call this%qcalc(n, m, hnew(n), hnew(m), ipos, qnm)
+    flowja(ipos) = qnm
+    flowja(this%dis%con%isym(ipos)) = -qnm
+    !
+    ! -- Return
+    return
+  end subroutine stdcond_flowja
 
   subroutine sgwf_npf_thksat(this, n, hn, thksat)
 ! ******************************************************************************
@@ -1291,10 +1340,10 @@ module GwfNpfModule
     call mem_allocate(this%iwetdry, 'IWETDRY', this%memoryPath)
     call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
-    call mem_allocate(this%allnonstdf, 'allnonstdf', this%memoryPath)
+    call mem_allocate(this%allnonstdf, 'ALLNONSTDF', this%memoryPath)
     call mem_allocate(this%xt3dbyconn, 'XT3DBYCONN', this%memoryPath)
     call mem_allocate(this%iprxt3d, 'IPRXT3D', this%memoryPath)
-    call mem_allocate(this%inonstdf, 'inonstdf', this%memoryPath)
+    call mem_allocate(this%inonstdf, 'INONSTDF', this%memoryPath)
     call mem_allocate(this%nbrmax, 'NBRMAX', this%memoryPath)
     !
     ! -- set pointer to inewtonur

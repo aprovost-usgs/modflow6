@@ -66,6 +66,7 @@ module GwtDspModule
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
     procedure, private :: stddisp_fc
+    procedure, private :: stddisp_flowja
    
   end type GwtDspType
   
@@ -453,31 +454,49 @@ module GwtDspModule
     real(DP), intent(inout), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
-    integer(I4B) :: n, m, ipos, isympos
-    real(DP) :: dnm
+    integer(I4B) :: n, m, ii, iis
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
-    if(this%ixt3d > 0) call this%xt3d%xt3d_flowja(cnew, flowja)
     !
-    if (.not.this%allnonstdf) then
-      do n = 1, this%dis%nodes
-        if(this%fmi%ibdgwfsat0(n) == 0) cycle
-        do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-          isympos = this%dis%con%jas(ipos)
-          ! -- Skip if non-standard dispersion formulation used for this
-          !    connection
-          if(this%inonstdf /= 0) then
-             if (this%idispform(isympos) /= 0) cycle
+    ! -- Loop over rows (nodes)
+    do n = 1, this%dis%nodes
+      !
+      ! -- Loop over connections of node n (columns) and apply the
+      !    appropriate dispersion formulations
+      do ii = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+!!        if (this%dis%con%mask(ii) == 0) cycle    ! amp_note: what is mask for, and why was it not considered in the orignial npf_flowja loop over nodes???
+        !
+        m = this%dis%con%ja(ii)
+        ! -- Skip if neighbor has lower cell number
+        if (m < n) cycle
+        !
+        iis = this%dis%con%jas(ii)
+        !
+        ! -- If no non-standard dispersion formulations used at any
+        !    connections, always use standard dispersion formulation.
+        !    Otherwise, use the appropriate formulation for the connection.
+        if (this%inonstdf == 0) then
+          !
+          ! -- Standard dispersion formulation
+          call this%stddisp_flowja(n, ii, cnew, flowja)
+          !
+        else
+          !
+          ! -- Standard dispersion formulation
+          if (this%idispform(iis) == 0) then
+             call this%stddisp_flowja(n, ii, cnew, flowja)
+          !
+          ! -- XT3D formulation
+          else if (this%idispform(iis) == 1) then
+             call this%xt3d%xt3d_flowja(n, ii, cnew, flowja)
+          !
           end if
           !
-          m = this%dis%con%ja(ipos)
-          if(this%fmi%ibdgwfsat0(m) == 0) cycle
-          dnm = this%dispcoef(isympos)
-          flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
-        enddo
+        end if
+        !
       enddo
-    endif
+    enddo
     !
     ! -- Return
     return
@@ -485,7 +504,7 @@ module GwtDspModule
  
   subroutine stddisp_fc(this, n, ipos, njasln, amatsln, idxglo)
 ! ******************************************************************************
-! stdcond_fc -- Formulate a connection
+! stddisp_fc -- Formulate a standard-dispersion connection
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -524,6 +543,46 @@ module GwtDspModule
     ! -- Return
     return
   end subroutine stddisp_fc
+
+  subroutine stddisp_flowja(this, n, ipos, cnew, flowja)
+! ******************************************************************************
+! stddisp_flowja -- Calculate dispersion contribution to flowja for a standard-
+!                   dispersion connection
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use GwfNpfModule, only: thksatnm
+    ! -- dummy
+    class(GwtDspType) :: this
+    integer(I4B) :: n, ipos
+    real(DP), intent(inout), dimension(:) :: cnew
+    real(DP), intent(inout), dimension(:) :: flowja
+    ! -- local
+    integer(I4B) :: m, isympos, isym
+    real(DP) :: dnm, cdiff
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate dispersion and add to flowja
+    !
+    if(this%fmi%ibdgwfsat0(n) == 0) return
+    !
+    m = this%dis%con%ja(ipos)
+    !
+    if(this%fmi%ibdgwfsat0(m) == 0) return
+    !
+    isympos = this%dis%con%jas(ipos)
+    isym = this%dis%con%isym(ipos)
+    !
+    dnm = this%dispcoef(isympos)
+    cdiff = cnew(m) - cnew(n)
+    flowja(ipos) = flowja(ipos) + dnm * cdiff
+    flowja(isym) = flowja(isym) - dnm * cdiff  ! amp_note: now looping only over m > n and making both the (n,m) and (m,n) updates to flowja at once
+    !
+    ! -- Return
+    return
+  end subroutine stddisp_flowja
   
   subroutine allocate_scalars(this)
 ! ******************************************************************************
@@ -552,10 +611,10 @@ module GwtDspModule
     call mem_allocate(this%iangle1, 'IANGLE1', this%memoryPath)
     call mem_allocate(this%iangle2, 'IANGLE2', this%memoryPath)
     call mem_allocate(this%iangle3, 'IANGLE3', this%memoryPath)
-    call mem_allocate(this%allnonstdf, 'allnonstdf', this%memoryPath)
+    call mem_allocate(this%allnonstdf, 'ALLNONSTDF', this%memoryPath)
     call mem_allocate(this%xt3dbyconn, 'XT3DBYCONN', this%memoryPath)
     call mem_allocate(this%iprxt3d, 'IPRXT3D', this%memoryPath)
-    call mem_allocate(this%inonstdf, 'inonstdf', this%memoryPath)
+    call mem_allocate(this%inonstdf, 'INONSTDF', this%memoryPath)
     call mem_allocate(this%nbrmax, 'NBRMAX', this%memoryPath)
     !
     ! -- Initialize
