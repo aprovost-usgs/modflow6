@@ -177,6 +177,7 @@ module GwfNpfModule
     type(Xt3dType), pointer :: xt3d
     integer(I4B), intent(in) :: ingnc
     ! -- local
+    integer(I4B) :: iis
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015',    &
@@ -210,7 +211,9 @@ module GwfNpfModule
     !    and initialize iflowform so it is available before the call to npf_ac
     if (this%inonstdf /= 0) then
       allocate(this%iflowform(this%dis%njas))
-      this%iflowform = 0
+      do iis = 1, this%dis%njas
+        this%iflowform(iis) = 0
+      end do
     end if
     !
     ! -- Save pointer to xt3d object
@@ -223,7 +226,9 @@ module GwfNpfModule
       if (this%xt3dbyconn) then
         call this%read_xt3d_data(.true.)
       else
-        this%iflowform = 1
+        do iis = 1, this%dis%njas
+          this%iflowform(iis) = 1
+        end do
       end if
       call this%xt3d%xt3d_df(dis,this%iflowform)
     endif
@@ -369,7 +374,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew
     ! -- local
-    integer(I4B) :: i, nnbrs
+    integer(I4B) :: i, nnbrs, iis
     ! -- formats
     ! -- data
 ! ------------------------------------------------------------------------------
@@ -397,7 +402,11 @@ module GwfNpfModule
       call this%read_data()
       !
       ! -- Initialize the iflowform and allnonstdf flags
-      this%iflowform = 0
+      if (this%inonstdf /= 0) then
+        do iis = 1, this%dis%njas
+          this%iflowform(iis) = 0
+        end do
+      end if
       this%allnonstdf = .false.
       ! -- If xt3d active:
       !    Read the xt3d data block if necessary to set iflowform, otherwise
@@ -407,7 +416,9 @@ module GwfNpfModule
           call this%read_xt3d_data(.false.)
           this%allnonstdf = all(this%iflowform /= 0)
         else
-          this%iflowform = 1
+          do iis = 1, this%dis%njas
+            this%iflowform(iis) = 1
+          end do
           this%allnonstdf = .true.
         end if
       end if
@@ -1407,7 +1418,7 @@ module GwfNpfModule
     integer(I4B), intent(in) :: ncells
     integer(I4B), intent(in) :: njas
     ! -- local
-    integer(I4B) :: n
+    integer(I4B) :: n, iis
 ! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%icelltype, ncells, 'ICELLTYPE', this%memoryPath)
@@ -1458,7 +1469,11 @@ module GwfNpfModule
     end do
     !
     ! -- initialize flow formulation flag array
-    if (this%inonstdf /= 0) this%iflowform = 0
+    if (this%inonstdf /= 0) then
+      do iis = 1, njas
+        this%iflowform(iis) = 0
+      end do
+    end if
     !
     ! -- allocate variable names
     allocate(this%aname(this%iname))

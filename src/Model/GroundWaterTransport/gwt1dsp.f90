@@ -120,6 +120,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     class(DisBaseType), pointer :: dis
     ! -- local
+    integer(I4B) :: iis
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
@@ -136,7 +137,9 @@ module GwtDspModule
     !    and initialize idispform so it is available before the call to dsp_ac
     if (this%inonstdf /= 0) then
       allocate(this%idispform(this%dis%njas))
-      this%idispform = 0
+      do iis = 1, this%dis%njas
+        this%idispform(iis) = 0
+      end do
     end if
     !
     ! -- xt3d create and define
@@ -149,7 +152,9 @@ module GwtDspModule
       if (this%xt3dbyconn) then
         call this%read_xt3d_data(.true.)
       else
-        this%idispform = 1
+        do iis = 1, this%dis%njas
+          this%idispform(iis) = 1
+        end do
       end if
       call this%xt3d%xt3d_df(dis,this%idispform)
     endif
@@ -219,7 +224,7 @@ module GwtDspModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
     ! -- local
-    integer(I4B) :: i, nnbrs
+    integer(I4B) :: i, nnbrs, iis
     ! -- formats
     character(len=*), parameter :: fmtdsp =                                    &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018',               &
@@ -248,7 +253,11 @@ module GwtDspModule
     call this%read_data()
     !
     ! -- Initialize the idispform and allnonstdf flags
-    this%idispform = 0
+    if (this%inonstdf /= 0) then
+      do iis = 1, this%dis%njas
+        this%idispform(iis) = 0
+      end do
+    end if
     this%allnonstdf = .false.
     ! -- If xt3d active:
     !    Read the xt3d data block if necessary to set idispform, otherwise
@@ -258,7 +267,9 @@ module GwtDspModule
         call this%read_xt3d_data(.false.)
         this%allnonstdf = all(this%idispform /= 0)
       else
-        this%idispform = 1
+        do iis = 1, this%dis%njas
+          this%idispform(iis) = 1
+        end do
         this%allnonstdf = .true.
       end if
     end if
@@ -650,7 +661,7 @@ module GwtDspModule
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
-     integer(I4B) :: i
+     integer(I4B) :: i, iis
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
@@ -686,7 +697,11 @@ module GwtDspModule
     enddo
     !
     ! -- initialize dispersion formulation flag array
-    if (this%inonstdf /= 0) this%idispform = 0
+    if (this%inonstdf /= 0) then
+      do iis = 1, this%dis%njas
+        this%idispform(iis) = 0
+      end do
+    end if
     !
     ! -- Return
     return
