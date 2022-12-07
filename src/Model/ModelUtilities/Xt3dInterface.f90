@@ -433,7 +433,7 @@ contains
     integer(I4B), dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
-    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n, vkr0, vkr1
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
@@ -464,7 +464,7 @@ contains
       nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
-                          ck0, allhc0)
+                          ck0, vkr0, allhc0)
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1, nnbr0
@@ -477,7 +477,7 @@ contains
         nnbr1 = this%dis%con%ia(m + 1) - this%dis%con%ia(m) - 1
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
-                            ck1, allhc1)
+                            ck1, vkr1, allhc1)
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                                ii00, ii11, ii10)
@@ -491,8 +491,9 @@ contains
         ! -- Compute "conductances" for interface between
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+                    vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,  &
+                    ar01, ar10, this%vcthresh, allhc0, allhc1, chat01, chati0, &
+                    chat1j)
         ! -- If Newton, compute and save saturated flow, then scale
         ! -- conductance-like coefficients by the actual area for
         ! -- subsequent amat and rhs assembly.
@@ -563,7 +564,7 @@ contains
     integer(I4B), dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
-    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n, vkr0, vkr1
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
@@ -586,7 +587,7 @@ contains
       nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
-                          ck0, allhc0)
+                          ck0, vkr0, allhc0)
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1, nnbr0
@@ -599,7 +600,7 @@ contains
         nnbr1 = this%dis%con%ia(m + 1) - this%dis%con%ia(m) - 1
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
-                            ck1, allhc1)
+                            ck1, vkr1, allhc1)
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                                ii00, ii11, ii10)
@@ -608,8 +609,9 @@ contains
         ! -- Compute "conductances" for interface between
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+                    vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,  &
+                    ar01, ar10, this%vcthresh, allhc0, allhc1, chat01, chati0, &
+                    chat1j)
         ! -- Contribute to rows for cells 0 and 1.
         this%amatpc(ii00) = this%amatpc(ii00) - chat01
         this%amatpc(ii01) = this%amatpc(ii01) + chat01
@@ -656,7 +658,7 @@ contains
     integer(I4B), dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
-    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n, vkr0, vkr1
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
@@ -670,7 +672,7 @@ contains
     nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
     ! -- Load conductivity and connection info for cell 0.
     call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
-                        ck0, allhc0)
+                        ck0, vkr0, allhc0)
     ! -- Find local neighbor number of cell 1.
     do il = 1, nnbr0
       if (inbr0(il) .eq. m) then
@@ -681,7 +683,7 @@ contains
     nnbr1 = this%dis%con%ia(m + 1) - this%dis%con%ia(m) - 1
     ! -- Load conductivity and connection info for cell 1.
     call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
-                        ck1, allhc1)
+                        ck1, vkr1, allhc1)
     ! -- Set various indices.
     call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                            ii00, ii11, ii10)
@@ -694,9 +696,10 @@ contains
     end if
     ! -- Compute "conductances" for interface between
     ! -- cells 0 and 1.
-    call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, &
-                ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+    call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0,     &
+                vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,      &
+                ar01, ar10, this%vcthresh, allhc0, allhc1, chat01, chati0,     &
+                chat1j)
     ! -- Apply scale factor to compute "conductances" for hfb correction
     if (condhfb > DZERO) then
       term = chat01 / (chat01 + condhfb)
@@ -868,7 +871,7 @@ contains
     integer(I4B), dimension(this%nbrmax) :: inbr0, inbr1
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
-    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n, vkr0, vkr1
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
@@ -882,7 +885,7 @@ contains
       nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
-                          ck0, allhc0)
+                          ck0, vkr0, allhc0)
       ! -- Loop over active neighbors of cell 0 that have a higher
       ! -- cell number (taking advantage of reciprocity).
       do il0 = 1, nnbr0
@@ -892,7 +895,7 @@ contains
         nnbr1 = this%dis%con%ia(m + 1) - this%dis%con%ia(m) - 1
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
-                            ck1, allhc1)
+                            ck1, vkr1, allhc1)
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                                ii00, ii11, ii10)
@@ -903,8 +906,9 @@ contains
         ! -- Compute "conductances" for interface between
         ! -- cells 0 and 1.
         call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+                    vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,  &
+                    ar01, ar10, this%vcthresh, allhc0, allhc1, chat01, chati0, &
+                    chat1j)
         ! -- Contribution to flow from primary connection.
         qnm = chat01 * (hnew(m) - hnew(n))
         ! -- Contribution from immediate neighbors of node 0.
@@ -949,7 +953,7 @@ contains
     integer(I4B) :: ipos
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
-    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n, vkr0, vkr1
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
@@ -964,7 +968,7 @@ contains
     nnbr0 = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
     ! -- Load conductivity and connection info for cell 0.
     call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
-                        ck0, allhc0)
+                        ck0, vkr0, allhc0)
     ! -- Find local neighbor number of cell 1.
     do il = 1, nnbr0
       if (inbr0(il) .eq. m) then
@@ -975,7 +979,7 @@ contains
     nnbr1 = this%dis%con%ia(m + 1) - this%dis%con%ia(m) - 1
     ! -- Load conductivity and connection info for cell 1.
     call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
-                        ck1, allhc1)
+                        ck1, vkr1, allhc1)
     ! -- Set various indices.
     call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                            ii00, ii11, ii10)
@@ -988,9 +992,10 @@ contains
     end if
     ! -- Compute "conductances" for interface between
     ! -- cells 0 and 1.
-    call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, &
-                ck0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+    call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0,     &
+                vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,      &
+                ar01, ar10, this%vcthresh, allhc0, allhc1, chat01, chati0,     &
+                chat1j)
     ! -- Apply scale factor to compute "conductances" for hfb correction
     if (condhfb > DZERO) then
       term = chat01 / (chat01 + condhfb)
@@ -1292,7 +1297,8 @@ contains
     return
   end subroutine xt3d_indices
 
-  subroutine xt3d_load(this, nodes, n, nnbr, inbr, vc, vn, dl, dln, ck, allhc)
+  subroutine xt3d_load(this, nodes, n, nnbr, inbr, vc, vn, dl, dln, ck, vkr,   &
+                       allhc)
 ! ******************************************************************************
 ! xt3d_load -- Load conductivity and connection info for a cell into arrays
 !              used by XT3D.
@@ -1309,12 +1315,13 @@ contains
     integer(I4B) :: n, nnbr
     integer(I4B), dimension(this%nbrmax) :: inbr
     real(DP), dimension(this%nbrmax, 3) :: vc, vn
-    real(DP), dimension(this%nbrmax) :: dl, dln
-    real(DP), dimension(3, 3) :: ck
+    real(DP), dimension(this%nbrmax) :: dl, dln, vkr
+    real(DP), dimension(3, 3) :: ck, ckjj
     ! -- local
     integer(I4B) :: il, ii, jj, jjs
     integer(I4B) :: ihcnjj
     real(DP) :: satn, satjj
+    real(DP) :: ckvn1, ckvn2, ckvn3, ckjjvn1, ckjjvn2, ckjjvn3, ckappa, ckappajj
     real(DP) :: cl1njj, cl2njj, dltot, ooclsum
 ! ------------------------------------------------------------------------------
     !
@@ -1341,12 +1348,28 @@ contains
         inbr(il) = jj
         satn = this%sat(n)
         satjj = this%sat(jj)
+        ckjj = DZERO
+        ckjj(1, 1) = this%k11(jj)
+        ckjj(2, 2) = this%k22(jj)
+        ckjj(3, 3) = this%k33(jj)
+        call this%xt3d_fillrmatck(jj)
+        ckjj = matmul(this%rmatck, ckjj)
+        ckjj = matmul(ckjj, transpose(this%rmatck))
         ! -- DISV and DIS
         ihcnjj = this%dis%con%ihc(jjs)
         call this%dis%connection_normal(n, jj, ihcnjj, vn(il, 1), vn(il, 2), &
                                         vn(il, 3), ii)
         call this%dis%connection_vector(n, jj, this%nozee, satn, satjj, ihcnjj, &
                                         vc(il, 1), vc(il, 2), vc(il, 3), dltot)
+        ckvn1 = ck(1,1)*vn(il,1) + ck(1,2)*vn(il,2) + ck(1,3)*vn(il,3)
+        ckvn2 = ck(2,1)*vn(il,1) + ck(2,2)*vn(il,2) + ck(2,3)*vn(il,3)
+        ckvn3 = ck(3,1)*vn(il,1) + ck(3,2)*vn(il,2) + ck(3,3)*vn(il,3)
+        ckappa = dsqrt(ckvn1*ckvn1 + ckvn2*ckvn2 + ckvn3*ckvn3)
+        ckjjvn1 = ckjj(1,1)*vn(il,1) + ckjj(1,2)*vn(il,2) + ckjj(1,3)*vn(il,3)
+        ckjjvn2 = ckjj(2,1)*vn(il,1) + ckjj(2,2)*vn(il,2) + ckjj(2,3)*vn(il,3)
+        ckjjvn3 = ckjj(3,1)*vn(il,1) + ckjj(3,2)*vn(il,2) + ckjj(3,3)*vn(il,3)
+        ckappajj = dsqrt(ckjjvn1*ckjjvn1 + ckjjvn2*ckjjvn2 + ckjjvn3*ckjjvn3)
+        vkr(il) = ckappa/ckappajj
         if (jj > n) then
           cl1njj = this%dis%con%cl1(jjs)
           cl2njj = this%dis%con%cl2(jjs)

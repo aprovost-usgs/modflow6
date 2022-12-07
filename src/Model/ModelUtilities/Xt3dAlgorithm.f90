@@ -9,9 +9,10 @@ module Xt3dAlgorithmModule
 
 contains
 
-  subroutine qconds(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+  subroutine qconds(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0,      &
+                    vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,  &
+                    ar01, ar10, vcthresh, allhc0, allhc1, chat01, chati0,      &
+                    chat1j)
 ! ******************************************************************************
 !
 !.....Compute the "conductances" in the normal-flux expression for an
@@ -31,6 +32,8 @@ contains
 !        dl0n = array of lengths contributed by cell 0's neighbors to
 !           their connections with cell 0.
 !        ck0 = conductivity tensor for cell 0.
+!        vkr0 = array of conductivity ratios for cell 0's neighbors'
+!           heterogeneity corrections.
 !        nnbr1 = number of neighbors (local connections) for cell 1.
 !        inbr1 = array with the list of neighbors for cell 1.
 !        il10 = local node number of cell 0 with respect to cell 1.
@@ -42,6 +45,8 @@ contains
 !        dl1n = array of lengths contributed by cell 1's neighbors to
 !           their connections with cell 1.
 !        ck1 = conductivity tensor for cell1.
+!        vkr1 = array of conductivity ratios for cell 1's neighbors'
+!           heterogeneity corrections.
 !        ar01 = area of interface (0,1).
 !        ar10 = area of interface (1,0).
 !        chat01 = "conductance" for connection (0,1).
@@ -64,6 +69,7 @@ contains
     real(DP), dimension(nnbrmx, 3) :: vn0
     real(DP), dimension(nnbrmx) :: dl0
     real(DP), dimension(nnbrmx) :: dl0n
+    real(DP), dimension(nnbrmx) :: vkr0
     real(DP), dimension(3, 3) :: ck0
     integer(I4B) :: nnbr1
     integer(I4B), dimension(nnbrmx) :: inbr1
@@ -72,6 +78,7 @@ contains
     real(DP), dimension(nnbrmx) :: vn1
     real(DP), dimension(nnbrmx) :: dl1
     real(DP), dimension(nnbrmx) :: dl1n
+    real(DP), dimension(nnbrmx) :: vkr1
     real(DP), dimension(3, 3) :: ck1
     real(DP) :: ar01
     real(DP) :: ar10
@@ -90,7 +97,7 @@ contains
     real(DP) :: wght0
     real(DP), dimension(nnbrmx) :: bhat0
     real(DP), dimension(nnbrmx) :: bhat1
-    real(DP) :: denom
+    real(DP) :: denom, hetscale0, hetscale1
 ! ------------------------------------------------------------------------------
 !
 !.....Set the global cell number for cell 1, as found in the neighbor
@@ -125,8 +132,20 @@ contains
       wght0 = 1d0 - wght1
       chat01 = wght1 * ahat1
       do i = 1, nnbrmx
-        chati0(i) = wght0 * bhat0(i)
-        chat1j(i) = wght1 * bhat1(i)
+        chati0(i) = 0d0
+        chat1j(i) = 0d0
+      end do
+      do i = 1, nnbr0
+        if (i /= il01) then
+          hetscale0 = vkr0(i) + (1d0 - vkr0(i))*dl0n(i)/(dl0(i) + dl0n(i))
+          chati0(i) = wght0 * bhat0(i) / hetscale0
+        end if
+      end do
+      do i = 1, nnbr1
+        if (i /= il10) then
+          hetscale1 = vkr1(i) + (1d0 - vkr1(i))*dl1n(i)/(dl1(i) + dl1n(i))
+          chat1j(i) = wght1 * bhat1(i) / hetscale1
+        end if
       end do
     end if
 !
