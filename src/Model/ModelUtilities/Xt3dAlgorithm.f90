@@ -10,9 +10,9 @@ module Xt3dAlgorithmModule
 contains
 
   subroutine qconds(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0,      &
-                    vkr0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, vkr1,  &
-                    ar01, ar10, vcthresh, allhc0, allhc1, chat01, chati0,      &
-                    chat1j)
+                    vkr0, vcm0, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1,  &
+                    vkr1, vcm1, ar01, ar10, vcthresh, allhc0, allhc1,          &
+                    chat01, chati0, chat1j)
 ! ******************************************************************************
 !
 !.....Compute the "conductances" in the normal-flux expression for an
@@ -33,7 +33,9 @@ contains
 !           their connections with cell 0.
 !        ck0 = conductivity tensor for cell 0.
 !        vkr0 = array of conductivity ratios for cell 0's neighbors'
-!           heterogeneity corrections.
+!           approximate heterogeneity corrections.
+!        vcm0 = array of modified connection vectors for cell 0's
+!           neighbors' exact heterogeneity corrections.
 !        nnbr1 = number of neighbors (local connections) for cell 1.
 !        inbr1 = array with the list of neighbors for cell 1.
 !        il10 = local node number of cell 0 with respect to cell 1.
@@ -46,7 +48,9 @@ contains
 !           their connections with cell 1.
 !        ck1 = conductivity tensor for cell1.
 !        vkr1 = array of conductivity ratios for cell 1's neighbors'
-!           heterogeneity corrections.
+!           approximate heterogeneity corrections.
+!        vcm1 = array of modified connection vectors for cell 1's
+!           neighbors' exact heterogeneity corrections.
 !        ar01 = area of interface (0,1).
 !        ar10 = area of interface (1,0).
 !        chat01 = "conductance" for connection (0,1).
@@ -70,6 +74,7 @@ contains
     real(DP), dimension(nnbrmx) :: dl0
     real(DP), dimension(nnbrmx) :: dl0n
     real(DP), dimension(nnbrmx) :: vkr0
+    real(DP), dimension(nnbrmx, 3) :: vcm0
     real(DP), dimension(3, 3) :: ck0
     integer(I4B) :: nnbr1
     integer(I4B), dimension(nnbrmx) :: inbr1
@@ -79,6 +84,7 @@ contains
     real(DP), dimension(nnbrmx) :: dl1
     real(DP), dimension(nnbrmx) :: dl1n
     real(DP), dimension(nnbrmx) :: vkr1
+    real(DP), dimension(nnbrmx, 3) :: vcm1
     real(DP), dimension(3, 3) :: ck1
     real(DP) :: ar01
     real(DP) :: ar10
@@ -117,10 +123,10 @@ contains
 !.....Else compute "conductances."
     else
 !........Compute contributions from cell 0.
-      call abhats(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
+      call abhats(nnbrmx, nnbr0, inbr0, il01, vc0, vn0, vcm0, dl0, dl0n, ck0,  &
                   vcthresh, allhc0, ar01, ahat0, bhat0)
 !........Compute contributions from cell 1.
-      call abhats(nnbrmx, nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, &
+      call abhats(nnbrmx, nnbr1, inbr1, il10, vc1, vn1, vcm1, dl1, dl1n, ck1,  &
                   vcthresh, allhc1, ar10, ahat1, bhat1)
 !........Compute "conductances" based on the two flux estimates.
       denom = (ahat0 + ahat1)
@@ -137,14 +143,16 @@ contains
       end do
       do i = 1, nnbr0
         if (i /= il01) then
-          hetscale0 = vkr0(i) + (1d0 - vkr0(i))*dl0n(i)/(dl0(i) + dl0n(i))
-          chati0(i) = wght0 * bhat0(i) / hetscale0
+!!!          hetscale0 = vkr0(i) + (1d0 - vkr0(i))*dl0n(i)/(dl0(i) + dl0n(i))
+!!!          chati0(i) = wght0 * bhat0(i) / hetscale0
+          chati0(i) = wght0 * bhat0(i)
         end if
       end do
       do i = 1, nnbr1
         if (i /= il10) then
-          hetscale1 = vkr1(i) + (1d0 - vkr1(i))*dl1n(i)/(dl1(i) + dl1n(i))
-          chat1j(i) = wght1 * bhat1(i) / hetscale1
+!!!          hetscale1 = vkr1(i) + (1d0 - vkr1(i))*dl1n(i)/(dl1(i) + dl1n(i))
+!!!          chat1j(i) = wght1 * bhat1(i) / hetscale1
+          chat1j(i) = wght1 * bhat1(i)
         end if
       end do
     end if
@@ -152,7 +160,7 @@ contains
     return
   end subroutine qconds
 
-  subroutine abhats(nnbrmx, nnbr, inbr, il01, vc, vn, dl0, dln, ck, &
+  subroutine abhats(nnbrmx, nnbr, inbr, il01, vc, vn, vcm, dl0, dln, ck,       &
                     vcthresh, allhc, ar01, ahat, bhat)
 ! ******************************************************************************
 !.....Compute "ahat" and "bhat" coefficients for one side of an
@@ -168,6 +176,7 @@ contains
     integer(I4B) :: il01
     real(DP), dimension(nnbrmx, 3) :: vc
     real(DP), dimension(nnbrmx, 3) :: vn
+    real(DP), dimension(nnbrmx, 3) :: vcm
     real(DP), dimension(nnbrmx) :: dl0
     real(DP), dimension(nnbrmx) :: dln
     real(DP), dimension(3, 3) :: ck
@@ -179,6 +188,7 @@ contains
     ! -- local
     logical :: iscomp
     real(DP), dimension(nnbrmx, 3) :: vccde
+    real(DP), dimension(nnbrmx, 3) :: vcmcde
     real(DP), dimension(3, 3) :: rmat
     real(DP), dimension(3) :: sigma
     real(DP), dimension(nnbrmx) :: bd
@@ -205,7 +215,7 @@ contains
 !        set the rotation matrix that transforms vectors from model
 !        coordinates to (c, d, e) coordinates.  (If no active
 !        connection is found that has a non-negligible component
-!        perpendicular to the primary connection, ilmo=0 is returned.)
+!        perpendicular to the primary connection, iml0=0 is returned.)
     call getrot(nnbrmx, nnbr, inbr, vc, il01, rmat, iml0)
 !
 !.....If no active connection with a non-negligible perpendicular
@@ -226,9 +236,12 @@ contains
 !           to "(c, d, e)" coordinates associated with the connection
 !           between cells 0 and 1.
       call tranvc(nnbrmx, nnbr, rmat, vc, vccde)
+!........Transform modified connection vectors for exact heterogeneity
+!           corrections.
+      call tranvc(nnbrmx, nnbr, rmat, vcm, vcmcde)
 !
 !........Get "a" and "b" weights for first perpendicular direction.
-      call abwts(nnbrmx, nnbr, inbr, il01, 2, vccde, &
+      call abwts(nnbrmx, nnbr, inbr, il01, 2, vccde, vcmcde, &
                  vcthresh, dl0, dln, acd, add, aed, bd)
 !
 !........If all neighboring connections are user-designated as
@@ -253,7 +266,7 @@ contains
           end if
         end do
         if (iscomp) then
-          call abwts(nnbrmx, nnbr, inbr, il01, 3, vccde, &
+          call abwts(nnbrmx, nnbr, inbr, il01, 3, vccde, vcmcde, &
                      vcthresh, dl0, dln, ace, aee, ade, be)
         else
           ace = 0d0
@@ -433,7 +446,7 @@ contains
     return
   end subroutine tranvc
 
-  subroutine abwts(nnbrmx, nnbr, inbr, il01, nde1, vccde, &
+  subroutine abwts(nnbrmx, nnbr, inbr, il01, nde1, vccde, vcmcde, &
                    vcthresh, dl0, dln, acd, add, aed, bd)
 ! ******************************************************************************
 !.....Compute "a" and "b" weights for the local connections with respect
@@ -443,6 +456,8 @@ contains
 !           primary interest on this call: "d" (2) or "e" (3).
 !        vccde = array of connection unit-vectors with respect to
 !           (c, d, e) coordinates.
+!        vcmcde = array of modified connection vectors for exact heterogeneity
+!           corrections, with respect to (c, d, e) coordinates.
 !        bd = array of "b" weights.
 !        aed = "a" weight that goes on the matrix side of the 2x2
 !           problem.
@@ -460,6 +475,7 @@ contains
     integer(I4B) :: il01
     integer(I4B) :: nde1
     real(DP), dimension(nnbrmx, 3) :: vccde
+    real(DP), dimension(nnbrmx, 3) :: vcmcde
     real(DP) :: vcthresh
     real(DP), dimension(nnbrmx) :: dl0
     real(DP), dimension(nnbrmx) :: dln
@@ -515,7 +531,8 @@ contains
 !........If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
       fact = dsum - omwt(il)
-      omwt(il) = fact * dabs(vccde(il, nde1))
+!!!      omwt(il) = fact * dabs(vccde(il, nde1))
+      omwt(il) = fact * dabs(vcmcde(il, nde1))
     end do
 !
 !.....Compute "b" weights.
@@ -524,8 +541,10 @@ contains
     do il = 1, nnbr
 !........If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
-      bd(il) = omwt(il) * sign(1d0, vccde(il, nde1))
-      dsum = dsum + omwt(il) * dabs(vccde(il, nde1))
+!!!      bd(il) = omwt(il) * sign(1d0, vccde(il, nde1))
+!!!      dsum = dsum + omwt(il) * dabs(vccde(il, nde1))
+      bd(il) = omwt(il) * sign(1d0, vcmcde(il, nde1))
+      dsum = dsum + omwt(il) * dabs(vcmcde(il, nde1))
     end do
     oodsum = 1d0 / dsum
     do il = 1, nnbr
@@ -541,8 +560,10 @@ contains
     do il = 1, nnbr
 !........If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
-      acd = acd + bd(il) * vccde(il, 1)
-      aed = aed + bd(il) * vccde(il, nde2)
+!!!      acd = acd + bd(il) * vccde(il, 1)
+!!!      aed = aed + bd(il) * vccde(il, nde2)
+      acd = acd + bd(il) * vcmcde(il, 1)
+      aed = aed + bd(il) * vcmcde(il, nde2)
     end do
 !
 !.....Apply attenuation function to acd, aed, and bd.
