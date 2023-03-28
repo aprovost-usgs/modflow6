@@ -1349,12 +1349,12 @@ contains
     end if
     if (indis == 0) then
       write (errmsg, '(1x,a)') &
-        'Discretization (DIS6, DISV6, or DISU6) Package not specified.'
+        'Discretization (DIS6, DISV6, or DISU6) package not specified.'
       call store_error(errmsg)
     end if
     if (this%innpf == 0) then
       write (errmsg, '(1x,a)') &
-        'Node Property Flow (NPF6) Package not specified.'
+        'Node Property Flow (NPF6) package not specified.'
       call store_error(errmsg)
     end if
     !
