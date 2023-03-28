@@ -38,7 +38,7 @@ jobs:
         run: python .github/common/fortran_format_check.py
 
   build:
-    name: Build (gfortran 12)
+    name: Build and unit test (gfortran 12)
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -74,7 +74,7 @@ jobs:
         run: meson test --verbose --no-rebuild -C builddir
 
   smoke_test:
-    name: Smoke test (gfortran 12)
+    name: Smoke testing (gfortran 12)
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -128,7 +128,7 @@ jobs:
           fi
 
   test_gfortran_latest:
-    name: Test (gfortran 12)
+    name: Integration testing (gfortran 12)
     needs:
       - lint
       - build
@@ -207,7 +207,7 @@ jobs:
         run: pytest -v --durations 0
 
   test_gfortran_previous:
-    name: Test gfortran (${{ matrix.GCC_V }}, ${{ matrix.os }})
+    name: Integration testing gfortran (${{ matrix.GCC_V }}, ${{ matrix.os }})
     needs:
       - lint
       - build
@@ -278,7 +278,7 @@ jobs:
           fi
 
   test_ifort:
-    name: Test (ifort)
+    name: Integration testing (ifort)
     needs:
       - lint
       - build
