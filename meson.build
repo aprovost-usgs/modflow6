@@ -164,9 +164,7 @@ endif
 subdir('src')
 subdir('srcbmi')
 subdir('utils')
-
-# add unit test directory
-# subdir('unittests')
+subdir('autotest')
 
 # meson tests to evaluate installation success
 test('Test installation version', mf6exe, args : ['-v',])
