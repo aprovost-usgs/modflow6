@@ -168,7 +168,7 @@ contains
     real(DP), intent(in) :: tmax
     ! doubleprecision :: initialTime,maximumTime,t   ! kluge not in arg list yet
     ! -- local
-    double precision :: x, y, z, xOrigin, yOrigin, zOrigin, sinrot, cosrot
+    double precision :: xOrigin, yOrigin, zOrigin, sinrot, cosrot
     integer(I4B) :: ntrack
     !
     if (this%cellRect%cellDefn%izone .ne. 0) then

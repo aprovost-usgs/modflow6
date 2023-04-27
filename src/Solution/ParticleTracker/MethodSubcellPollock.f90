@@ -69,7 +69,7 @@ contains
     real(DP), intent(in) :: tmax
     ! doubleprecision :: initialTime,maximumTime,t   ! kluge not in arg list yet
     ! -- local
-    double precision :: x, y, z, xOrigin, yOrigin, zOrigin, sinrot, cosrot
+    double precision :: xOrigin, yOrigin, zOrigin, sinrot, cosrot
     !
     ! initialTime = 0d0         ! kluge test
     ! maximumTime = 9d99        ! kluge test

@@ -20,15 +20,12 @@ contains
     type(CellRectType), pointer :: cellRect
     integer :: istatus
     ! -- local
-    class(*), pointer :: obj
     type(CellDefnType), pointer :: cellDefn
     integer :: ipv, ipv1, ipv2, ipv3, ipv4
     integer, dimension(4) :: ipvnxt = (/2, 3, 4, 1/)
-    double precision :: x1, y1, x2, y2, x4, y4, xp, yp
+    double precision :: x1, y1, x2, y2, x4, y4
     double precision :: dx2, dy2, dx4, dy4, areax, areay, areaz
     double precision :: xOrigin, yOrigin, zOrigin, dx, dy, dz, sinrot, cosrot
-    integer :: m, m0, m1, m2
-    double precision :: epsang, s0x, s0y, s0mag, s2x, s2y, s2mag, sinang
     double precision :: factor, term
     !
     call create_cellRect(cellRect)
@@ -136,9 +133,7 @@ contains
     type(CellRectQuadType), pointer :: cellRectQuad
     integer :: istatus
     ! -- local
-    class(*), pointer :: obj
-    double precision :: epsang, s0x, s0y, s0mag, s2x, s2y, s2mag, sinang
-    integer :: i, irvOrigin, irv, isc
+    integer :: i, irv, isc
     double precision :: qhalf, qdisttopbot, q1, q2, q4
     !
     call create_cellRectQuad(cellRectQuad)

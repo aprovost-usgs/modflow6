@@ -3,11 +3,9 @@ subroutine traverse_triangle(ntmax, nsave, diff, rdiff, isolv, tol, step, texit,
     alpexit,betexit,itrifaceenter,itrifaceexit,rxx,rxy,ryx,ryy,sxx,sxy,syy,      &
                 lbary, alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, vziodz, az)
 !
-  use ternarymod, only : xtrk,ytrk,ztrk,xtrktru,ytrktru,ztrktru,ca1,ca2,ca3,   &
-   cb1, cb2, waa, wab, wba, wbb, alpp1, betp1, alppdiff, betpdiff, v0alp, v0bet, &
-        v1alp, v1bet, v2alp, v2bet, icase, lenter, lsupout, tcpufindexit, nrptsoln
+  use ternarymod, only : waa, wab, wba, wbb, icase, lsupout
   implicit double precision(a - h, o - z)
-  logical lface0, lbary
+  logical lbary
   intrinsic cpu_time
   !
   ! -- Compute elements of matrix W
@@ -21,18 +19,18 @@ subroutine traverse_triangle(ntmax, nsave, diff, rdiff, isolv, tol, step, texit,
   end if
   !
   ! -- Compute exit time (travel time to exit) and exit location
-!!!  do irep=1,nrptsoln   ! kluge test
-call find_exit_bary(isolv, 0, itrifaceenter, alp0, bet0, alp1, bet1, alpi, beti, &
+  ! do irep=1,nrptsoln   ! kluge test
+  call find_exit_bary(isolv, 0, itrifaceenter, alp0, bet0, alp1, bet1, alpi, beti, &
                       rxx, rxy, ryx, ryy, tol, step, vziodz, az, &
                       texit0, alpexit0, betexit0)
-call find_exit_bary(isolv, 1, itrifaceenter, alp1, bet1, alp2, bet2, alpi, beti, &
+  call find_exit_bary(isolv, 1, itrifaceenter, alp1, bet1, alp2, bet2, alpi, beti, &
                       rxx, rxy, ryx, ryy, tol, step, vziodz, az, &
                       texit1, alpexit1, betexit1)
-call find_exit_bary(isolv, 2, itrifaceenter, alp2, bet2, alp0, bet0, alpi, beti, &
+  call find_exit_bary(isolv, 2, itrifaceenter, alp2, bet2, alp0, bet0, alpi, beti, &
                       rxx, rxy, ryx, ryy, tol, step, vziodz, az, &
                       texit2, alpexit2, betexit2)
   texit = min(texit0, texit1, texit2)
-!!!  end do               ! kluge test
+  ! end do               ! kluge test
   ! -- Note that while the numbering of triangle faces is generally zero-based
   ! -- (0, 1, 2), itrifaceexit, which gets passed out, is one-based (1, 2, 3).
   if (texit .eq. texit0) then
@@ -53,10 +51,9 @@ call find_exit_bary(isolv, 2, itrifaceenter, alp2, bet2, alp0, bet0, alpi, beti,
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
-logical function point_in_polygon(numvermx, nvert, ncpl, xi, yi, icell) ! kluge note: not used currently but will probably come in handy
+
+logical function point_in_polygon(numvermx, nvert, ncpl, xi, yi, icell) 
+  ! kluge note: not used currently but will probably come in handy
   !
   use ternarymod, only: ivert_polygon, x_vert, y_vert
   implicit double precision(a - h, o - z)
@@ -84,12 +81,11 @@ logical function point_in_polygon(numvermx, nvert, ncpl, xi, yi, icell) ! kluge 
   return
   !
 end function
+
+subroutine find_init_cell(numvermx,nvert,nlay,ncpl,xi,yi,zi,ilayeri,icelli)   
+! kluge: move to "ternary_setup"???
 !
-! ------------------------------------------------------------------------------
-!
-subroutine find_init_cell(numvermx,nvert,nlay,ncpl,xi,yi,zi,ilayeri,icelli)   ! kluge: move to "ternary_setup"???
-!
-  use ternarymod, only: ivert_polygon, x_vert, y_vert, z_bot
+  use ternarymod, only: z_bot
   implicit double precision(a - h, o - z)
   logical point_in_polygon
   external point_in_polygon
@@ -133,17 +129,16 @@ subroutine find_init_cell(numvermx,nvert,nlay,ncpl,xi,yi,zi,ilayeri,icelli)   ! 
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
-subroutine find_init_triangle(numvermx,nvert,ncpl,xi,yi,xctr,yctr,icell,itri)   ! kluge note: not currently used but maybe could be in load_subcell of MethodCellTernary???
+
+subroutine find_init_triangle(numvermx,nvert,ncpl,xi,yi,xctr,yctr,icell,itri)
+! kluge note: not currently used but maybe could be in load_subcell of MethodCellTernary???
 !
   use ternarymod, only: ivert_polygon, x_vert, y_vert
   implicit double precision(a - h, o - z)
   !
   ! -- Find initial triangular subcell
   itri = 0
-!!!  numver = num_vertices(numvermx,ncpl,icell)
+  ! numver = num_vertices(numvermx,ncpl,icell)
   numver = 4 ! kluge
   do iv = 1, numver
     iv0 = iv
@@ -168,7 +163,7 @@ subroutine find_init_triangle(numvermx,nvert,ncpl,xi,yi,xctr,yctr,icell,itri)   
     d01 = x0 * y1rel - y0 * x1rel
     alphai = (di2 - d02) / d12
     betai = -(di1 - d01) / d12
-if ((alphai .ge. 0d0) .and. (betai .ge. 0d0) .and. (alphai + betai .lt. 1d0)) then ! kluge note: think this handles points on triangle boundaries ok
+    if ((alphai .ge. 0d0) .and. (betai .ge. 0d0) .and. (alphai + betai .lt. 1d0)) then ! kluge note: think this handles points on triangle boundaries ok
       itri = iv ! but maybe not!!!!!!!!!!!!
       exit ! kluge note: doesn't handle particle smack on cell center
     end if
@@ -183,9 +178,7 @@ if ((alphai .ge. 0d0) .and. (betai .ge. 0d0) .and. (alphai + betai .lt. 1d0)) th
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine canonical(x0, y0, x1, y1, x2, y2, v0x, v0y, v1x, v1y, v2x, v2y, &
   xi,yi,rxx,rxy,ryx,ryy,sxx,sxy,syy,lbary,alp0,bet0,alp1,bet1,alp2,bet2,alpi,beti)
 !
@@ -233,12 +226,10 @@ subroutine canonical(x0, y0, x1, y1, x2, y2, v0x, v0y, v1x, v1y, v2x, v2y, &
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine get_w(alp0, bet0, alp1, bet1, alp2, bet2, lbary, waa, wab, wba, wbb)
 !
-  use ternarymod, only: v0alp, v0bet, v1alp, v1bet, v2alp, v2bet
+  use ternarymod, only: v0alp, v0bet, v1alp, v2alp, v2bet
   implicit double precision(a - h, o - z)
   logical lbary
   !
@@ -267,12 +258,10 @@ subroutine get_w(alp0, bet0, alp1, bet1, alp2, bet2, lbary, waa, wab, wba, wbb)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine solve_coefs(alpi, beti)
 !
-  use ternarymod, only : ca1,ca2,ca3,cb1,cb2,waa,wab,wba,wbb,v0alp,v0bet,icase
+  use ternarymod, only : ca1,ca2,ca3,cb1,cb2,waa,wab,wbb,v0alp,v0bet,icase
   implicit double precision(a - h, o - z)
   !
   ! -- Compute analytical solution coefficients depending on case
@@ -337,12 +326,10 @@ subroutine solve_coefs(alpi, beti)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine step_analytical(t, alp, bet)
 !
-  use ternarymod, only: ca1, ca2, ca3, cb1, cb2, waa, wab, wba, wbb, icase
+  use ternarymod, only: ca1, ca2, ca3, cb1, cb2, waa, wbb, icase
   implicit double precision(a - h, o - z)
   !
   ! -- Step (evaluate) analytically depending on case
@@ -367,9 +354,7 @@ subroutine step_analytical(t, alp, bet)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
 !
   use ternarymod, only: waa, wab, wba, wbb, v0alp, v0bet
@@ -420,17 +405,14 @@ subroutine step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine find_exit_bary(isolv,itriface,itrifaceenter,alp1,bet1,alp2,bet2,alpi,beti,rxx,rxy,ryx,ryy,tol,step,vziodz,az,  &
                           texit, alpexit, betexit)
 !
-  use ternarymod, only : ca1,ca2,ca3,cb1,cb2,waa,wab,wba,wbb,v0alp,v0bet,v1alp,v1bet,v2alp,v2bet,  &
-            alpp1, betp1, alpp2, betp2, alppdiff, betpdiff, icase, lenter, lsupout
+  use ternarymod, only : waa,wab,wbb,v0alp,v0bet,v1alp,v1bet,v2alp,v2bet, lsupout
   implicit double precision(a - h, o - z)
-  logical lconstbet
-  character convstrg * 11, facename(0:2) * 7, cfail * 60
+  ! logical lconstbet
+  character facename(0:2) * 7, cfail * 60
   data(facename(itri), itri=0, 2)/"beta=0 ", "gamma=0", "alpha=0"/
   external fbary1, fbary2
   common / debug / ntdebug
@@ -572,18 +554,18 @@ subroutine find_exit_bary(isolv,itriface,itrifaceenter,alp1,bet1,alp2,bet2,alpi,
             if (isolv .eq. 1) then
               ! -- Use Brent's method with initial bounds on beta of betlo and bethi,
               ! -- assuming they bound the root
-      call soln_brent(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
+              call soln_brent(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
             else if (isolv .eq. 2) then
               ! -- Use Chandrupatla's method with initial bounds on beta of betlo and bethi,
               ! -- assuming they bound the root
-      call soln_chand(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
+              call soln_chand(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
             else if (isolv .eq. 3) then
               ! -- Use a test method with initial bounds on beta of betlo and bethi,
               ! -- assuming they bound the root
-       call soln_test(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
+              call soln_test(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
             else if (isolv .eq. -1) then
               ! -- Use Euler integration to find exit
-  call soln_euler(itriface, alpi, beti, step, vziodz, az, texit, alpexit, betexit)
+              call soln_euler(itriface, alpi, beti, step, vziodz, az, texit, alpexit, betexit)
             else
               write (*, '(A)') "Invalid isolv = ", isolv ! kluge
               write (69, '(A)') "Invalid isolv = ", isolv
@@ -619,9 +601,7 @@ subroutine find_exit_bary(isolv,itriface,itrifaceenter,alp1,bet1,alp2,bet2,alpi,
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 double precision function fbary1(bet)
 !
   implicit double precision(a - h, o - z)
@@ -636,9 +616,7 @@ double precision function fbary1(bet)
   return
   !
 end function
-!
-! ------------------------------------------------------------------------------
-!
+
 double precision function fbary2(bet)
 !
   implicit double precision(a - h, o - z)
@@ -653,15 +631,14 @@ double precision function fbary2(bet)
   return
   !
 end function
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine get_t_alpt(bet, t, alp)
 !
-  use ternarymod, only: ca1, ca2, ca3, cb1, cb2, waa, wab, wba, wbb, icase
+  use ternarymod, only: ca1, ca2, ca3, cb1, cb2, waa, wbb, icase
   implicit double precision(a - h, o - z)
   !
-  ! -- Given beta evaluate t and alpha depending on case     ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
+  ! -- Given beta evaluate t and alpha depending on case     
+  ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
   !
   zerotol = 1d-10 ! kluge
   !
@@ -689,9 +666,7 @@ subroutine get_t_alpt(bet, t, alp)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine get_bet_outflow_bary(vn1, vn2, betoutlo, betouthi)
 !
   implicit double precision(a - h, o - z)
@@ -725,9 +700,7 @@ subroutine get_bet_outflow_bary(vn1, vn2, betoutlo, betouthi)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine get_bet_soln_limits(beti, betsollo, betsolhi, ibettrend)
 !
   use ternarymod, only: v0bet, wbb
@@ -784,9 +757,111 @@ subroutine get_bet_soln_limits(beti, betsollo, betsolhi, ibettrend)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
+! todo modernize...
+!   double precision function zeroin(ax,bx,f,tol)
+!     double precision ax,bx,f,tol
+!     ! a zero of the function  f(x)  is computed in the interval ax,bx .
+!     ! input..
+!     !
+!     ! ax     left endpoint of initial interval
+!     ! bx     right endpoint of initial interval
+!     ! f      function subprogram which evaluates f(x) for any x in
+!     !        the interval  ax,bx
+!     ! tol    desired length of the interval of uncertainty of the
+!     !        final result (.ge.0.)
+!     !
+!     ! output..
+!     !
+!     ! zeroin abscissa approximating a zero of  f  in the interval ax,bx
+!     !
+!     !     it is assumed  that   f(ax)   and   f(bx)   have  opposite  signs
+!     ! this is checked, and an error message is printed if this is not
+!     ! satisfied.   zeroin  returns a zero  x  in the given interval
+!     ! ax,bx  to within a tolerance  4*macheps*abs(x)+tol, where macheps  is
+!     ! the  relative machine precision defined as the smallest representable
+!     ! number such that  1.+macheps .gt. 1.
+!     !     this function subprogram is a slightly  modified  translation  of
+!     ! the algol 60 procedure  zero  given in  richard brent, algorithms for
+!     ! minimization without derivatives, prentice-hall, inc. (1973).
+!     double precision a,b,c,d,e,eps,fa,fb,fc,tol1,xm,p,q,r,s
+!     double precision dabs, d1mach
+!    10 eps = d1mach(4)
+!       tol1 = eps+1.0d0
+! 
+!       a=ax
+!       b=bx
+!       fa=f(a)
+!       fb=f(b)
+!       ! check that f(ax) and f(bx) have different signs
+!       if (fa .eq.0.0d0 .or. fb .eq. 0.0d0) go to 20
+!       if (fa * (fb/dabs(fb)) .le. 0.0d0) go to 20
+!          write(6,2500)
+! 2500     format(1x,'f(ax) and f(bx) do not have different signs,',
+!      1             ' zeroin is aborting')
+!          return
+!    20 c=a
+!       fc=fa
+!       d=b-a
+!       e=d
+!    30 if (dabs(fc).ge.dabs(fb)) go to 40
+!       a=b
+!       b=c
+!       c=a
+!       fa=fb
+!       fb=fc
+!       fc=fa
+!    40 tol1=2.0d0*eps*dabs(b)+0.5d0*tol
+!       xm = 0.5d0*(c-b)
+!       if ((dabs(xm).le.tol1).or.(fb.eq.0.0d0)) go to 150
+! 
+!       ! see if a bisection is forced
+! 
+!       if ((dabs(e).ge.tol1).and.(dabs(fa).gt.dabs(fb))) go to 50
+!       d=xm
+!       e=d
+!       go to 110
+!    50 s=fb/fa
+!       if (a.ne.c) go to 60
+!       ! linear interpolation
+!       p=2.0d0*xm*s
+!       q=1.0d0-s
+!       go to 70
+! 
+!       ! inverse quadratic interpolation
+! 
+!    60 q=fa/fc
+!       r=fb/fc
+!       p=s*(2.0d0*xm*q*(q-r)-(b-a)*(r-1.0d0))
+!       q=(q-1.0d0)*(r-1.0d0)*(s-1.0d0)
+!    70 if (p.le.0.0d0) go to 80
+!       q=-q
+!       go to 90
+!    80 p=-p
+!    90 s=e
+!       e=d
+!       if (((2.0d0*p).ge.(3.0d0*xm*q-dabs(tol1*q))).or.(p.ge.
+!      *dabs(0.5d0*s*q))) go to 100
+!       d=p/q
+!       go to 110
+!   100 d=xm
+!       e=d
+!   110 a=b
+!       fa=fb
+!       if (dabs(d).le.tol1) go to 120
+!       b=b+d
+!       go to 140
+!   120 if (xm.le.0.0d0) go to 130
+!       b=b+tol1
+!       go to 140
+!   130 b=b-tol1
+!   140 fb=f(b)
+!       if ((fb*(fc/dabs(fc))).gt.0.0d0) go to 20
+!       go to 30
+!   150 zeroin=b
+!       return
+! end function zeroin
+
 subroutine soln_brent(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
   !
   implicit double precision(a - h, o - z)
@@ -810,9 +885,7 @@ subroutine soln_brent(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfai
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine soln_chand(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail)
   !
   implicit double precision(a - h, o - z)
@@ -821,7 +894,7 @@ subroutine soln_chand(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfai
   !
   ! -- Use Chandrupatla's method with initial bounds on beta of betlo and bethi,
   ! -- assuming they bracket the root
-!!!  tol = 1d-7               ! kluge
+  ! tol = 1d-7               ! kluge
   itmax = 50 ! kluge
   itact = itmax + 1 ! kluge
   blo = betlo
@@ -836,9 +909,7 @@ subroutine soln_chand(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfai
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine soln_test(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail) ! kluge test
   !
   implicit double precision(a - h, o - z)
@@ -862,9 +933,7 @@ subroutine soln_test(itriface, betlo, bethi, tol, texit, alpexit, betexit, cfail
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 subroutine soln_euler(itriface,alpi,beti,step,vziodz,az,texit,alpexit,betexit)
   !
   implicit double precision(a - h, o - z)
@@ -927,12 +996,10 @@ subroutine soln_euler(itriface,alpi,beti,step,vziodz,az,texit,alpexit,betexit)
   return
   !
 end subroutine
-!
-! ------------------------------------------------------------------------------
-!
+
 double precision function alpfun(t) ! kluge: not needed???
 !
-  use ternarymod, only : ca1,ca2,ca3,cb1,cb2,waa,wab,wba,wbb,icase,alpexitcopy
+  use ternarymod, only : ca1,ca2,ca3,waa,wbb,icase,alpexitcopy
   implicit double precision(a - h, o - z)
   !
   ! -- Given t evaluate alpha depending on case     ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
@@ -953,9 +1020,7 @@ double precision function alpfun(t) ! kluge: not needed???
   return
   !
 end function
-!
-! ------------------------------------------------------------------------------
-!
+
 double precision function zeroch(x0, x1, f, epsa)
 !
   implicit double precision(a - h, o - z)
@@ -1049,11 +1114,8 @@ double precision function zeroch(x0, x1, f, epsa)
   return
   !
 end function
-!
-! ------------------------------------------------------------------------------
-!
+
 double precision function zerotest(x0, x1, f, epsa) ! kluge test
-!
   implicit double precision(a - h, o - z)
   logical retainedxa, retainedxb
   !
@@ -1083,7 +1145,7 @@ double precision function zerotest(x0, x1, f, epsa) ! kluge test
   retainedxb = .false.
   !
   do while (.true.)
-!!    yl = ya - xa*(yb - ya)/(xb - xa)
+    ! yl = ya - xa*(yb - ya)/(xb - xa)
     yl = (ya * xb * emb - yb * xa * ema) / (xb * emb - xa * ema)
     tol = 4d0 * epsm * dabs(yl) + epsa
     if (dabs(yb - ya) .le. tol) then
@@ -1096,8 +1158,8 @@ double precision function zerotest(x0, x1, f, epsa) ! kluge test
         return
       else if (xl .gt. 0d0) then
         if (retainedxa) then
-!!          ema = 1d0 - xl/xb
-!!          if (ema <= 0d0) ema = 5d-1
+        ! ema = 1d0 - xl/xb
+        ! if (ema <= 0d0) ema = 5d-1
           ema = 5d-1 ! kluge illinois
         else
           ema = 1d0
@@ -1109,8 +1171,8 @@ double precision function zerotest(x0, x1, f, epsa) ! kluge test
         retainedxb = .false.
       else
         if (retainedxb) then
-!!          emb = 1d0 - xl/xa
-!!          if (emb <= 0d0) emb = 5d-1
+        ! emb = 1d0 - xl/xa
+        ! if (emb <= 0d0) emb = 5d-1
           emb = 5d-1 ! kluge illinois
         else
           emb = 1d0

@@ -1371,7 +1371,8 @@ contains
   !<
   subroutine prt_solve(this)
     ! -- modules
-    use TdisModule, only: kper, totimc, delt, totim ! kluge note: kper for plotting only; is delt needed?
+    ! kluge note: kper for plotting only; is delt needed?
+    use TdisModule, only: kper, totimc, totim 
     ! -- modules
     use TdisModule, only: nper, nstp
     use PrtPrpModule, only: PrtPrpType
@@ -1641,7 +1642,7 @@ contains
     integer(I4B), dimension(:), allocatable :: bndpkgs
     integer(I4B) :: n
     integer(I4B) :: indis = 0 ! DIS enabled flag
-    character(len=LENMEMPATH) :: mempathdsp = ''
+    ! character(len=LENMEMPATH) :: mempathdsp = ''
     !
     ! -- set input memory paths, input/model and input/model/namfile
     model_mempath = create_mem_path(component=this%name, context=idm_context)

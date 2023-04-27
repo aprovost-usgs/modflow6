@@ -391,7 +391,11 @@ contains
   end subroutine load_cellDefn_basic
 
   !> @brief Load polygon vertices into cell definition from the grid
-  subroutine load_cellDefn_polyverts(this, cellDefn) ! kluge note: are polyverts even needed for MethodDis???
+  !!
+  !! kluge note: are polyverts even needed for MethodDis???
+  !!
+  !<
+  subroutine load_cellDefn_polyverts(this, cellDefn) 
     use InputOutputModule ! kluge
     use GwfDisModule ! kluge???
     use ConstantsModule, only: DHALF
@@ -458,7 +462,7 @@ contains
     type(CellDefnType), pointer, intent(inout) :: cellDefn
     ! -- local
     integer :: ic, npolyverts
-    integer :: ic1, ic2, icu1, icu2, j1, j2, iloc, ipos
+    integer :: ic1, ic2, icu1, icu2, j1, iloc, ipos
     integer :: irow1, irow2, jcol1, jcol2, klay1, klay2
     integer :: iedgeface
     integer :: ncpl
@@ -501,13 +505,13 @@ contains
             ! Neighbor to the W
             iedgeface = 1
           end if
-          cellDefn%facenbr(iedgeface) = iloc
+          cellDefn%facenbr(iedgeface) = int(iloc, 1)
         else if (klay2 > klay1) then
           ! -- Bottom face neighbor
-          cellDefn%facenbr(npolyverts + 2) = iloc
+          cellDefn%facenbr(npolyverts + 2) = int(iloc, 1)
         else
           ! -- Top face neighbor
-          cellDefn%facenbr(npolyverts + 3) = iloc
+          cellDefn%facenbr(npolyverts + 3) = int(iloc, 1)
         end if
       end do
       ! -- List of edge (polygon) faces wraps around
@@ -518,41 +522,43 @@ contains
     !
   end subroutine load_cellDefn_facenbr
 
-  !> @brief Find the shared edge face of two cells.
-  !!
-  !! Find the shared edge face of cell1 shared by cell1 and cell2.
-  !! isharedface will return with 0 if there is no shared edge
-  !! face.  Proceed forward through ivlist1 and backward through
-  !! ivlist2 as a clockwise face in cell1 must correspond to a
-  !! counter clockwise face in cell2
-  !!
-  !<
-  subroutine shared_edgeface(ivlist1, ivlist2, iedgeface) ! kluge note: based on DisvGeom shared_edge
-    integer(I4B), dimension(:) :: ivlist1
-    integer(I4B), dimension(:) :: ivlist2
-    integer(I4B), intent(out) :: iedgeface
-    integer(I4B) :: nv1
-    integer(I4B) :: nv2
-    integer(I4B) :: il1
-    integer(I4B) :: il2
-    logical :: found
-    !
-    found = .false.
-    nv1 = size(ivlist1)
-    nv2 = size(ivlist2)
-    iedgeface = 0
-    outerloop: do il1 = 1, nv1 - 1
-      do il2 = nv2, 2, -1
-        if (ivlist1(il1) == ivlist2(il2) .and. &
-            ivlist1(il1 + 1) == ivlist2(il2 - 1)) then
-          found = .true.
-          iedgeface = il1
-          exit outerloop
-        end if
-      end do
-      if (found) exit
-    end do outerloop
-  end subroutine shared_edgeface
+  ! !> @brief Find the shared edge face of two cells.
+  ! !!
+  ! !! Find the shared edge face of cell1 shared by cell1 and cell2.
+  ! !! isharedface will return with 0 if there is no shared edge
+  ! !! face.  Proceed forward through ivlist1 and backward through
+  ! !! ivlist2 as a clockwise face in cell1 must correspond to a
+  ! !! counter clockwise face in cell2
+  ! !!
+  ! !! kluge note: based on DisvGeom shared_edge
+  ! !!
+  ! !<
+  ! subroutine shared_edgeface(ivlist1, ivlist2, iedgeface) 
+  !   integer(I4B), dimension(:) :: ivlist1
+  !   integer(I4B), dimension(:) :: ivlist2
+  !   integer(I4B), intent(out) :: iedgeface
+  !   integer(I4B) :: nv1
+  !   integer(I4B) :: nv2
+  !   integer(I4B) :: il1
+  !   integer(I4B) :: il2
+  !   logical :: found
+  !   !
+  !   found = .false.
+  !   nv1 = size(ivlist1)
+  !   nv2 = size(ivlist2)
+  !   iedgeface = 0
+  !   outerloop: do il1 = 1, nv1 - 1
+  !     do il2 = nv2, 2, -1
+  !       if (ivlist1(il1) == ivlist2(il2) .and. &
+  !           ivlist1(il1 + 1) == ivlist2(il2 - 1)) then
+  !         found = .true.
+  !         iedgeface = il1
+  !         exit outerloop
+  !       end if
+  !     end do
+  !     if (found) exit
+  !   end do outerloop
+  ! end subroutine shared_edgeface
 
   !> @brief Load flows into the cell definition
   !!
@@ -566,10 +572,7 @@ contains
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: cellDefn
     ! -- local
-    integer :: ig, ic, npolyverts, m, n
-
-    integer :: ioffset, nbf, m1, m2, mdiff ! kluge
-    double precision :: qbf ! kluge
+    integer :: ic, npolyverts, m, n
     !
     ic = cellDefn%icell
     !
@@ -622,7 +625,7 @@ contains
     class(MethodDisType), intent(inout) :: this
     type(CellDefnType), intent(inout) :: cellDefn
     ! -- local
-    integer :: ig, ic, npolyverts, m, n
+    integer :: ic, npolyverts
     integer :: ioffset
     !
     ic = cellDefn%icell
