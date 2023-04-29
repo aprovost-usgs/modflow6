@@ -78,7 +78,8 @@ contains
       "(1x,/1x,'PRTFMI -- PRT FLOW MODEL INTERFACE, VERSION 1, 8/29/2017',     &
       &' INPUT READ FROM UNIT ', i0, //)" ! kluge note: update
     character(len=*), parameter :: fmtfmi0 = &
-"(1x,/1x,'PRTFMI -- PRT FLOW MODEL INTERFACE, VERSION 1, 8/29/2017')" ! kluge note: update
+"(1x,/1x,'PRTFMI -- PRT FLOW MODEL INTERFACE, &
+&VERSION 1, 8/29/2017')" ! kluge note: update
     !
     ! --print a message identifying the FMI package.
     if (this%inunit /= 0) then
@@ -127,7 +128,7 @@ contains
     ! if (this%flows_from_file .and. this%inunit /= 0) then
     !   do n = 1, size(this%aptbudobj)
     !     ! kluge note: need GWF advanced-package flows from separate files?
-    !     call this%aptbudobj(n)%ptr%bfr_advance(this%dis, this%iout)  
+    !     call this%aptbudobj(n)%ptr%bfr_advance(this%dis, this%iout)
     !   end do
     ! end if
     ! -- Accumulate flows
@@ -218,7 +219,7 @@ contains
         iflowface = 0 ! kluge note: eventually have default iflowface values for different packages
         if (iauxiflowface > 0) then
           ! expected int here... ok to round??
-          iflowface = NINT(this%gwfpackages(ip)%auxvar(iauxiflowface, ib)) 
+          iflowface = NINT(this%gwfpackages(ip)%auxvar(iauxiflowface, ib))
           if (iflowface < 0) iflowface = iflowface + 11 ! bot -> 9, top -> 10; see note re: max faces below
           ! else if (iauxiflowface < 0) then                    ! kluge note: allow IFACE and do conversion???
           !   ! kluge note: is it possible to check for a rectangular-celled grid here???

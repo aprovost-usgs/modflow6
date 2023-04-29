@@ -44,7 +44,8 @@ contains
     !
     ! -- Create tracking domain for this method and set trackingDomain pointer
     call create_cellRectQuad(methodCellPollockQuad%cellRectQuad)
-    methodCellPollockQuad%trackingDomainType => methodCellPollockQuad%cellRectQuad%type
+    methodCellPollockQuad%trackingDomainType => &
+      methodCellPollockQuad%cellRectQuad%type
     !
     ! -- Create subdomain to be loaded and injected into the submethod
     call create_subcellRect(methodCellPollockQuad%subcellRect)
@@ -218,9 +219,9 @@ contains
     ! particle%iTrackingDomainBoundary(2) = inface
     ! if (inface.ne.0) particle%iTrackingDomain(3) = 0
     if (inface .eq. -1) then
-    ! particle%iTrackingDomain(2) = -abs(particle%iTrackingDomain(2))  ! kluge???
-    ! particle%iTrackingDomainBoundary(2) = 0
-    ! particle%iTrackingDomain(3) = -abs(particle%iTrackingDomain(3))  ! kluge???
+      ! particle%iTrackingDomain(2) = -abs(particle%iTrackingDomain(2))  ! kluge???
+      ! particle%iTrackingDomainBoundary(2) = 0
+      ! particle%iTrackingDomain(3) = -abs(particle%iTrackingDomain(3))  ! kluge???
       particle%iTrackingDomainBoundary(2) = 0
     else if (inface .eq. 0) then
       particle%iTrackingDomainBoundary(2) = 0
@@ -342,7 +343,7 @@ contains
     ! -- local
     ! kluge note: (in general) do tracking calc without velmult and divide exit
     ! time by velmult at the end???
-    ! double precision :: velmult       
+    ! double precision :: velmult
     double precision :: dx, dy, dz, areax, areay, areaz
     double precision :: dxprel, dyprel
     integer :: isc, npolyverts, m1, m2
@@ -372,7 +373,7 @@ contains
           isc = 4
         else
           ! kluge note: need to resolve this ambiguity based on flow direction
-          print *, "particle initially on shared subcell edge" 
+          print *, "particle initially on shared subcell edge"
           ! pause
           stop
         end if
@@ -383,20 +384,20 @@ contains
           isc = 1
         else
           ! kluge note: need to resolve this ambiguity based on flow direction
-          print *, "particle initially on shared subcell edge" 
+          print *, "particle initially on shared subcell edge"
           ! pause
           stop
         end if
       else
         ! kluge note: need to resolve this ambiguity based on flow direction
-        print *, "particle initially on shared subcell edge" 
+        print *, "particle initially on shared subcell edge"
         ! pause
         stop
       end if
       subcellRect%isubcell = isc
       ! kluge note: as a matter of form, do we want to allow
       ! this subroutine to modify the particle???
-      particle%iTrackingDomain(3) = isc 
+      particle%iTrackingDomain(3) = isc
       ! kluge note: initial insubface is not currently being determined
     end if
     dx = 5d-1 * dx
@@ -476,7 +477,7 @@ contains
     m1 = npolyverts + 2
     m2 = m1 + 1
     ! kluge note: porosity not explicitly included yet
-    ! subcellRect%vz1 = velmult*2.5d-1*this%cellRectQuad%cellDefn%faceflow(m1)/areaz     
+    ! subcellRect%vz1 = velmult*2.5d-1*this%cellRectQuad%cellDefn%faceflow(m1)/areaz
     ! subcellRect%vz2 = -velmult*2.5d-1*this%cellRectQuad%cellDefn%faceflow(m2)/areaz
     term = factor / areaz
     subcellRect%vz1 = 2.5d-1 * this%cellRectQuad%cellDefn%faceflow(m1) * term

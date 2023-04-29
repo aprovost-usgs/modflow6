@@ -31,7 +31,7 @@ contains
     call create_cellRect(cellRect)
     cellDefn => cellPoly%cellDefn
     ! -- kluge note: no check whether conversion is possible; assumes it is
-    ! 
+    !
     ! -- Translate and rotate the rectangular cell into local coordinates
     ! -- with x varying from 0 to dx and y varying from 0 to dy. Choose the
     ! -- "south-west" vertex to be the local origin so that the rotation
@@ -146,8 +146,11 @@ contains
     ! -- coordinates.
     cellRectQuad%irvOrigin = cellRectQuad%get_irectvertSW() ! kluge note: no need to pass all that stuff in call below -- set internally in CellRectQuad
     call cellRectQuad%get_rectDimensionsRotation( &
-      cellRectQuad%irvOrigin,cellRectQuad%xOrigin,cellRectQuad%yOrigin,cellRectQuad%zOrigin, &
-      cellRectQuad%dx,cellRectQuad%dy,cellRectQuad%dz,cellRectQuad%sinrot,cellRectQuad%cosrot)
+      cellRectQuad%irvOrigin, cellRectQuad%xOrigin, &
+      cellRectQuad%yOrigin, cellRectQuad%zOrigin, &
+      cellRectQuad%dx, cellRectQuad%dy, &
+      cellRectQuad%dz, cellRectQuad%sinrot, &
+      cellRectQuad%cosrot)
     !
     ! -- Set the external and internal face flows used for subcells
     do i = 0, 3
@@ -189,7 +192,7 @@ contains
   !!
   !! kluge note: probably won't be needed in the long run
   !<
-  function MetricForPointInCellPolygon(xpt, ypt, cellDefn) result(value) 
+  function MetricForPointInCellPolygon(xpt, ypt, cellDefn) result(value)
     ! -- modules
     use CellDefnModule, only: CellDefnType
     ! -- dummy
