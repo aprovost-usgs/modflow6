@@ -4,7 +4,9 @@ module MethodSubcellTernaryModule
   use MethodModule
   use SubcellTriModule
   use ParticleModule
-  use ternarymod ! kluge
+  use Ternary
+  use TernaryUtil, only: rotate, skew
+  use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
   implicit none
 
   private

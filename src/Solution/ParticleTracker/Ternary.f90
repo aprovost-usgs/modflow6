@@ -1,5 +1,5 @@
 !
-module ternarymod
+module Ternary
   !
   ! -- Particle track arrays
   double precision, allocatable :: xtrk(:), ytrk(:), ztrk(:)

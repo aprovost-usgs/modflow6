@@ -7,7 +7,7 @@ module MethodCellTernaryModule
   use CellDefnModule
   use SubcellTriModule
   use ParticleModule
-  use ternarymod ! kluge
+  use Ternary ! kluge
   use TrackDataModule, only: TrackDataType
   implicit none
 
