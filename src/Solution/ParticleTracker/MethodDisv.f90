@@ -132,10 +132,10 @@ contains
     ic = particle%iTrackingDomain(levelNext) ! kluge note: is cell number always known coming in?
     call this%load_cellDefn(ic, this%cellPoly%cellDefn)
     !
-    if (this%fmi%ibdgwfsat0(ic) == 0) then              ! kluge note: use cellDefn%sat == DZERO here instead?
+    if (this%fmi%ibdgwfsat0(ic) == 0) then ! kluge note: use cellDefn%sat == DZERO here instead?
       ! -- Cell is active but dry, so select and initialize pass-to-bottom
       ! -- cell method and set cell method pointer
-      call methodCellPassToBot%init(particle, this%cellPoly%cellDefn,          &
+      call methodCellPassToBot%init(particle, this%cellPoly%cellDefn, &
                                     this%trackdata)
       submethod => methodCellPassToBot
     else

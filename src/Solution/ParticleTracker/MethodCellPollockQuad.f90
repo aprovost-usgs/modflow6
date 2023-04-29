@@ -287,7 +287,7 @@ contains
       if (particle%z > this%cellRectQuad%cellDefn%top) then
         particle%z = this%cellRectQuad%cellDefn%top
         ! -- Store track data
-        ntrack = this%trackdata%ntrack + 1    ! kluge?
+        ntrack = this%trackdata%ntrack + 1 ! kluge?
         this%trackdata%ntrack = ntrack
         this%trackdata%iptrack(ntrack) = particle%ipart
         this%trackdata%ictrack(ntrack) = particle%iTrackingDomain(2)
@@ -403,7 +403,7 @@ contains
     dx = 5d-1 * dx
     dy = 5d-1 * dy
     dz = this%cellRectQuad%cellDefn%top - &
-    this%cellRectQuad%cellDefn%bot ! kluge note: need to account for partial saturation
+         this%cellRectQuad%cellDefn%bot ! kluge note: need to account for partial saturation
     areax = dy * dz
     areay = dx * dz
     areaz = dx * dy

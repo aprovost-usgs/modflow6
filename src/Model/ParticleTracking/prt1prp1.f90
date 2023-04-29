@@ -438,7 +438,7 @@ contains
     ! -- Do the release, if there is one
     if (isRelease) then
       do nps = 1, this%nreleasepts
-        ic = this%noder(nps)  ! reduced node number (cell ID)
+        ic = this%noder(nps) ! reduced node number (cell ID)
         ! -- If drape option activated, release particle in highest active
         ! -- cell vertically below release point. If no such active cell,
         ! -- do not release particle.
@@ -447,12 +447,12 @@ contains
             ! -- Search for highest active cell
             call this%dis%highest_active(ic, this%ibound)
             ! -- If returned cell is inactive, do not release particle
-            if (this%ibound(ic) == 0) cycle   ! kluge note: somehow record for the user that a particle was scheduled but not released?
+            if (this%ibound(ic) == 0) cycle ! kluge note: somehow record for the user that a particle was scheduled but not released?
           end if
         end if
-        np = this%npart + 1   ! particle index
-        this%npart = np       ! ???
-        trelease = totimc     ! release time
+        np = this%npart + 1 ! particle index
+        this%npart = np ! ???
+        trelease = totimc ! release time
 
         ! -- Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
         if (this%stoptraveltime == huge(1d0)) then ! kluge huge?

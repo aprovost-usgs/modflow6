@@ -365,7 +365,10 @@ contains
         iprp = iprp + 1
         itrack1 => this%itrack(iprp)
         itrack2 => this%itrack(iprp + 1)
-        call packobj%prp_set_pointers(this%ibound, itrack1, itrack2, this%trackdata)   ! kluge
+        call packobj%prp_set_pointers(this%ibound, &
+                                      itrack1, &
+                                      itrack2, &
+                                      this%trackdata) ! kluge
       end select
       ! -- Read and allocate package
       call packobj%bnd_ar()
@@ -1402,7 +1405,7 @@ contains
           ! -- and skip tracking
           if (packobj%partlist%istatus(np) .ne. 1) then
 ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
-!            ntrack = this%trackdata%ntrack + 1   
+!            ntrack = this%trackdata%ntrack + 1
 !            this%trackdata%ntrack = ntrack
 !            this%trackdata%iptrack(ntrack) = np
 !          this%trackdata%ictrack(ntrack) = packobj%partlist%iTrackingDomain(np, 2)

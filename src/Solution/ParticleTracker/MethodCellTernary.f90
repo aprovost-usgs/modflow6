@@ -223,7 +223,7 @@ contains
       if (particle%z > this%cellPoly%cellDefn%top) then
         particle%z = this%cellPoly%cellDefn%top
         ! -- Store track data
-        ntrack = this%trackdata%ntrack + 1    ! kluge?
+        ntrack = this%trackdata%ntrack + 1 ! kluge?
         this%trackdata%ntrack = ntrack
         this%trackdata%iptrack(ntrack) = particle%ipart
         this%trackdata%ictrack(ntrack) = particle%iTrackingDomain(2)

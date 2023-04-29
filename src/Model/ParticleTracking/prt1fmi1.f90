@@ -137,7 +137,7 @@ contains
     ! -- if flow cell is dry, then set this%ibound = 0
     do n = 1, this%dis%nodes
       !
-      ! -- Calculate the ibound-like array that has 0 if saturation 
+      ! -- Calculate the ibound-like array that has 0 if saturation
       !    is zero and 1 otherwise
       if (this%gwfsat(n) > DZERO) then
         this%ibdgwfsat0(n) = 1

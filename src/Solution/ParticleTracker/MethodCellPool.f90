@@ -11,13 +11,13 @@ module MethodCellPoolModule ! kluge
   public :: destroy_methodCellPool
 
   type(MethodCellPollockType), pointer &
-  , public :: methodCellPollock => null() ! method for the method pool
+    , public :: methodCellPollock => null() ! method for the method pool
   type(MethodCellPollockQuadType), pointer &
-  , public :: methodCellPollockQuad   => null()   ! method for the method pool
+    , public :: methodCellPollockQuad => null() ! method for the method pool
   type(MethodCellTernaryType), pointer &
-  , public :: methodCellTernary => null() ! method for the method pool
+    , public :: methodCellTernary => null() ! method for the method pool
   type(MethodCellPassToBotType), pointer &
-  , public :: methodCellPassToBot       => null()   ! method for the method pool
+    , public :: methodCellPassToBot => null() ! method for the method pool
 
 contains
 
@@ -44,7 +44,7 @@ contains
     call methodCellTernary%destroy()
     deallocate (methodCellTernary)
     call methodCellPassToBot%destroy()
-    deallocate(methodCellPassToBot)
+    deallocate (methodCellPassToBot)
     !
     return
     !

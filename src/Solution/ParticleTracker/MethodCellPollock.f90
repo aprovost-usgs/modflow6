@@ -94,7 +94,7 @@ contains
     class(MethodType), pointer, intent(inout) :: submethod
     !
     ! -- Load rectangular subcell for injection into Pollock's subcell method
-    call this%load_subcell(particle,levelNext,this%subcellRect)
+    call this%load_subcell(particle, levelNext, this%subcellRect)
     ! -- Select and initialize Pollock's subcell method and set subcell
     ! -- method pointer
     call methodSubcellPollock%init(this%subcellRect)
@@ -201,7 +201,7 @@ contains
       if (particle%z > this%cellRect%cellDefn%top) then
         particle%z = this%cellRect%cellDefn%top
         ! -- Store track data
-        ntrack = this%trackdata%ntrack + 1    ! kluge?
+        ntrack = this%trackdata%ntrack + 1 ! kluge?
         this%trackdata%ntrack = ntrack
         this%trackdata%iptrack(ntrack) = particle%ipart
         this%trackdata%ictrack(ntrack) = particle%iTrackingDomain(2)

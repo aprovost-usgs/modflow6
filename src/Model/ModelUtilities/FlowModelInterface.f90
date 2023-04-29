@@ -46,7 +46,7 @@ module FlowModelInterfaceModule
     real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null()      !< mark cells with saturation = 0 to exclude from dispersion
+    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
     real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
     integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
