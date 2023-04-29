@@ -397,7 +397,7 @@ contains
     integer(I4B) :: i, n, ic
     integer(I4B) :: nps, np
     real(DP) :: trelease, tstop ! kluge?
-    real(DP) :: top, bot, sat
+    ! real(DP) :: top, bot, sat
     logical(LGP) :: isRelease
     !
     ! -- Reset particle mass released for time step

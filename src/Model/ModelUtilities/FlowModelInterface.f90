@@ -492,14 +492,16 @@ contains
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     logical(LGP) :: foundchildclassoption
+
+    ! kluge note: belongs in GWTFMI?
     character(len=*), parameter :: fmtisvflow = &
-            "(4x,'CELL-BY-CELL FLOW INFORMATION &
-            &WILL BE SAVED TO BINARY FILE " &
-&"WHENEVER ICBCFL IS NOT ZERO AND &
-&FLOW IMBALANCE CORRECTION ACTIVE.')" ! kluge note: belongs in GWTFMI?
+            "(4x,'CELL-BY-CELL FLOW INFORMATION "// &
+            "WILL BE SAVED TO BINARY FILE "// &
+            "WHENEVER ICBCFL IS NOT ZERO AND "// &
+            "FLOW IMBALANCE CORRECTION ACTIVE.')" 
     character(len=*), parameter :: fmtifc = &
-          "(4x,'MASS WILL BE ADDED OR REMOVED &
-          &TO COMPENSATE FOR FLOW IMBALANCE.')"
+          "(4x,'MASS WILL BE ADDED OR REMOVED "// &
+          "TO COMPENSATE FOR FLOW IMBALANCE.')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &

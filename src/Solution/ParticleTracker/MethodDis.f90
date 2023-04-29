@@ -117,7 +117,7 @@ contains
     double precision :: areax, areay, areaz
     double precision :: dx, dy, dz
     double precision :: factor, term
-    double precision :: top, bot
+    ! double precision :: top, bot
     !
     ic = particle%iTrackingDomain(levelNext) ! kluge note: is cell number always known coming in?
     ! -- load cellDefn

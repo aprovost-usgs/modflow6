@@ -1180,7 +1180,6 @@ contains
     this%inobs = 0
     this%nprp = 0
     this%trackdata%ntrack = 0
-    ntrackmx = 1000000 ! kluge hardwire
     !
     ! -- return
     return
@@ -1196,6 +1195,7 @@ contains
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
     !
+    ntrackmx = 1000000 ! kluge hardwire
     call mem_allocate(this%itrack, this%nprp + 1, &
                       'ITRACK', this%memorypath)
     call mem_allocate(this%trackdata%iptrack, ntrackmx, &
