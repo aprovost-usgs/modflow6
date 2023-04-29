@@ -36,7 +36,8 @@ contains
     ! -- Create tracking domain for this method and set trackingDomain pointer
     call create_subcellRect(methodSubcellPollock%subcellRect)
     ! methodSubcellPollock%trackingDomain => methodSubcellPollock%subcellRect
-    methodSubcellPollock%trackingDomainType => methodSubcellPollock%subcellRect%type
+    methodSubcellPollock%trackingDomainType => &
+      methodSubcellPollock%subcellRect%type
     !
     return
   end subroutine create_methodSubcellPollock

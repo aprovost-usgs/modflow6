@@ -139,9 +139,9 @@ contains
     ! end if
     ! particle%iTrackingDomainBoundary(2) = inface
     if (inface .eq. -1) then
-    ! particle%iTrackingDomain(2) = -abs(particle%iTrackingDomain(2))   ! kluge???
-    ! particle%iTrackingDomainBoundary(2) = 0
-    ! particle%iTrackingDomain(3) = -abs(particle%iTrackingDomain(3))   ! kluge???
+      ! particle%iTrackingDomain(2) = -abs(particle%iTrackingDomain(2))   ! kluge???
+      ! particle%iTrackingDomainBoundary(2) = 0
+      ! particle%iTrackingDomain(3) = -abs(particle%iTrackingDomain(3))   ! kluge???
       particle%iTrackingDomainBoundary(2) = 0
     else
       if ((inface .ge. 1) .and. (inface .le. 4)) then
@@ -249,7 +249,7 @@ contains
 
   !> @brief Loads the lone rectangular subcell from the rectangular cell
   !! kluge note: is levelNext needed here and in similar "load" routines???
-  subroutine load_subcell(this, particle, levelNext, subcellRect) ! 
+  subroutine load_subcell(this, particle, levelNext, subcellRect) !
     ! -- dummy
     class(MethodCellPollockType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle

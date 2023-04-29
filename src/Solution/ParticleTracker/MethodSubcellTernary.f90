@@ -16,7 +16,7 @@ module MethodSubcellTernaryModule
   ! -- Extend MethodType to the ternary subcell-method type (MethodSubcellTernaryType)
   type, extends(MethodType) :: MethodSubcellTernaryType
     private
-    type(SubcellTriType), pointer, public :: subcellTri => null() ! tracking domain 
+    type(SubcellTriType), pointer, public :: subcellTri => null() ! tracking domain
     integer, allocatable :: ivert_polygon(:, :) ! kluge
   contains
     procedure, public :: destroy ! destructor for the method
@@ -40,7 +40,8 @@ contains
     ! -- Create tracking domain for this method and set trackingDomain pointer
     call create_subcellTri(methodSubcellTernary%subcellTri)
     ! methodSubcellTernary%trackingDomain => methodSubcellTernary%subcellTri
-    methodSubcellTernary%trackingDomainType => methodSubcellTernary%subcellTri%type
+    methodSubcellTernary%trackingDomainType => &
+      methodSubcellTernary%subcellTri%type
     !
     return
     !
@@ -105,7 +106,7 @@ contains
     double precision :: alp, bet, dt, t, dtexitxy, texit, xc, yc, x, y, z
     integer :: izstatus, itopbotexit
     integer :: ntmax, nsave, isolv, itrifaceenter, itrifaceexit
-    double precision :: diff,rdiff,tol,step,dtexit,alpexit,betexit
+    double precision :: diff, rdiff, tol, step, dtexit, alpexit, betexit
     integer :: ntdebug ! kluge
     !
     lbary = .true. ! kluge
@@ -146,8 +147,10 @@ contains
     vztop = subcellTri%vztop
     !
     ! -- Translate and rotate coordinates to "canonical" configuration
-    call canonical(x0, y0, x1, y1, x2, y2, v0x, v0y, v1x, v1y, v2x, v2y, xi, yi, &
-   rxx, rxy, ryx, ryy, sxx, sxy, syy, lbary, alp0, bet0, alp1, bet1, alp2, bet2, &
+    call canonical(x0, y0, x1, y1, x2, y2, v0x, v0y, &
+                   v1x, v1y, v2x, v2y, xi, yi, &
+                   rxx, rxy, ryx, ryy, sxx, sxy, syy, &
+                   lbary, alp0, bet0, alp1, bet1, alp2, bet2, &
                    alpi, beti)
     !
     ! -- Do calculations related to analytical z solution, which can be done
@@ -155,7 +158,8 @@ contains
     ! -- stepping during triangle (subcell) traversal
     ! kluge note: actually, can probably do z calculation just once for each cell
     zirel = (zi - zbot) / dz
-    call pr_CalculateDT_kluge(vzbot, vztop, dz, zirel, vzi, az, dtexitz, izstatus, &
+    call pr_CalculateDT_kluge(vzbot, vztop, dz, zirel, vzi, &
+                              az, dtexitz, izstatus, &
                               itopbotexit)
     vziodz = vzi / dz
     !
@@ -167,9 +171,13 @@ contains
     ! kluge note: can probably avoid calculating alpexit
     ! here in many cases and wait to calculate it later,
     ! once the final trajectory time is known
-    call traverse_triangle(ntmax, nsave, diff, rdiff, isolv, tol, step, & 
-    dtexitxy, alpexit, betexit, itrifaceenter, itrifaceexit, rxx, rxy, ryx, ryy, & 
-    sxx, sxy, syy, lbary, alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, vziodz, az) 
+    call traverse_triangle(ntmax, nsave, diff, rdiff, &
+                           isolv, tol, step, &
+                           dtexitxy, alpexit, betexit, itrifaceenter, &
+                           itrifaceexit, rxx, rxy, ryx, ryy, &
+                           sxx, sxy, syy, lbary, alp0, &
+                           bet0, alp1, bet1, alp2, bet2, &
+                           alpi, beti, vziodz, az)
     !
     ! -- Check for no exit face
     if ((itopbotexit .eq. 0) .and. (itrifaceexit .eq. 0)) then
@@ -232,7 +240,7 @@ contains
     ! -- Calculate final particle location
     ! -- kluge note: need to evaluate both alpha and beta here only
     ! -- for exitFace=0, otherwise just one or the other
-    call step_analytical(dt, alp, bet) 
+    call step_analytical(dt, alp, bet)
     if (exitFace .eq. 1) then
       bet = 0d0
     else if (exitFace .eq. 2) then
@@ -279,7 +287,8 @@ contains
     !
   end subroutine track_sub
 
-  subroutine pr_CalculateDT_kluge(v1, v2, dx, xL, v, dvdx, dt, status, itopbotexit)
+  subroutine pr_CalculateDT_kluge(v1, v2, dx, xL, v, dvdx, &
+                                  dt, status, itopbotexit)
     implicit none
     doubleprecision, intent(in) :: v1, v2, dx, xL
     doubleprecision, intent(inout) :: v, dvdx, dt

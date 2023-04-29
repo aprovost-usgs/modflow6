@@ -19,9 +19,11 @@ module MethodCellTernaryModule
   type, extends(MethodType) :: MethodCellTernaryType
     private
     type(CellPolyType), pointer :: cellPoly => null() ! tracking domain for the method
-    type(subcellTriType), pointer :: subcellTri ! subcell object injected into subcell method
+
+    ! subcell object injected into subcell method
     ! kluge note: redundant to store these, kluge "99"
-    double precision :: x_vert(99), y_vert(99) ! cell vertex coordinates     
+    type(subcellTriType), pointer :: subcellTri
+    double precision :: x_vert(99), y_vert(99) ! cell vertex coordinates
     double precision :: xctr, yctr ! cell center coordinates
     double precision :: vx_vert_polygon(99), vy_vert_polygon(99) ! cell vertex velocities
     double precision :: vxctr, vyctr ! cell center velocities
@@ -253,7 +255,7 @@ contains
         x1 = this%cellPoly%cellDefn%polyvert(ivm1)%x
         y1 = this%cellPoly%cellDefn%polyvert(ivm1)%y
         ! kluge note: assuming porosity=1. for now
-        ! flow0 = this%cellPoly%cellDefn%faceflow(iv)/this%dz 
+        ! flow0 = this%cellPoly%cellDefn%faceflow(iv)/this%dz
         ! flow1 = this%cellPoly%cellDefn%faceflow(ivm1)/this%dz
         term = DONE / (this%cellPoly%cellDefn%porosity * this%dz)
         flow0 = this%cellPoly%cellDefn%faceflow(iv) * term
@@ -263,21 +265,21 @@ contains
         d02x = x2 - x0
         d02y = y2 - y0
         ! kluge note: can det ever be zero, like maybe for a 180-deg vertex???
-        ! oodet = DONE/(d01y*d02x - d02y*d01x)           
+        ! oodet = DONE/(d01y*d02x - d02y*d01x)
         ! velmult = particle%velmult
         ! kluge note: "flow" is volumetric (face) flow rate per unit thickness, divided by porosity
-        ! v0x = -velmult*oodet*(d02x*flow1 + d01x*flow0)   
-        ! v0y = -velmult*oodet*(d02y*flow1 + d01y*flow0)   !             
+        ! v0x = -velmult*oodet*(d02x*flow1 + d01x*flow0)
+        ! v0y = -velmult*oodet*(d02y*flow1 + d01y*flow0)   !
         det = d01y * d02x - d02y * d01x
         retfactor = this%cellPoly%cellDefn%retfactor
         ! kluge note: can det ever be zero, like maybe for a 180-deg vertex???
         ! term = velfactor/det
         ! kluge note: can det ever be zero, like maybe for a 180-deg vertex???
-        term = DONE / (retfactor * det) 
+        term = DONE / (retfactor * det)
         ! kluge note: "flow" here is volumetric flow rate (MODFLOW face flow)
-        v0x = -term * (d02x * flow1 + d01x * flow0) 
+        v0x = -term * (d02x * flow1 + d01x * flow0)
         ! per unit thickness, divided by porosity
-        v0y = -term * (d02y * flow1 + d01y * flow0) 
+        v0y = -term * (d02y * flow1 + d01y * flow0)
         this%vx_vert_polygon(iv) = v0x
         this%vy_vert_polygon(iv) = v0y
         xsum = xsum + x0
@@ -289,7 +291,7 @@ contains
         area = area + x0 * y1 - x1 * y0
       end do
       ! kluge note: from get_cell2d_area
-      !   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -   
+      !   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -
       !             (x2*y1 + x3*y2 + x4*y3 + ... + x1*yn)]
       area = area * DHALF
       ! this%vzbot = velmult*this%cellPoly%cellDefn%faceflow(npolyverts+2)/area
@@ -332,7 +334,7 @@ contains
     ! -- local
     ! kluge note: maybe (in general) do tracking calc without velmult
     ! and divide exit time by velmult at the end???
-    ! double precision :: velmult       
+    ! double precision :: velmult
     integer :: ic, isc, npolyverts
     integer :: iv0, iv1, ipv0, ipv1
     integer :: iv
@@ -374,18 +376,22 @@ contains
         d01 = x0 * y1rel - y0 * x1rel
         alphai = (di2 - d02) / d12
         betai = -(di1 - d01) / d12
-        ! kluge note: can iTrackingDomainBoundary(2) be used to identify the subcell???
-        betatol = -1e-7 ! kluge    
+        ! kluge note: can iTrackingDomainBoundary(2) be used to identify the subcell?
+        betatol = -1e-7 ! kluge
         ! kluge note: think this handles points on triangle boundaries ok
-        if ((alphai.ge.0d0).and.(betai.ge.betatol).and.(alphai+betai.le.1d0)) then   
+        if ((alphai .ge. 0d0) .and. &
+            (betai .ge. betatol) .and. &
+            (alphai + betai .le. 1d0)) then
           isc = iv ! but maybe not!!!!!!!!!!!!
           exit ! kluge note: doesn't handle particle smack on cell center
         end if
       end do
       if (isc .le. 0) then
-        write(*,'(A,I0,A,I0)') "error -- initial triangle not found for particle ", &
-          particle%ipart, " in cell ", ic  ! kluge
-        write(69,'(A,I0,A,I0)') "error -- initial triangle not found for particle ", & 
+        write (*, '(A,I0,A,I0)') &
+          "error -- initial triangle not found for particle ", &
+          particle%ipart, " in cell ", ic ! kluge
+        write (69, '(A,I0,A,I0)') &
+          "error -- initial triangle not found for particle ", &
           particle%ipart, " in cell ", ic
         ! pause
         stop
@@ -393,7 +399,7 @@ contains
         ! subcellTri%isubcell = isc
         ! kluge note: as a matter of form, do we want to allow
         ! this subroutine to modify the particle???
-        particle%iTrackingDomain(3) = isc 
+        particle%iTrackingDomain(3) = isc
       end if
     end if
     subcellTri%isubcell = isc

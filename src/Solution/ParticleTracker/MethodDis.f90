@@ -395,7 +395,7 @@ contains
   !! kluge note: are polyverts even needed for MethodDis???
   !!
   !<
-  subroutine load_cellDefn_polyverts(this, cellDefn) 
+  subroutine load_cellDefn_polyverts(this, cellDefn)
     use InputOutputModule ! kluge
     use GwfDisModule ! kluge???
     use ConstantsModule, only: DHALF
@@ -533,7 +533,7 @@ contains
   ! !! kluge note: based on DisvGeom shared_edge
   ! !!
   ! !<
-  ! subroutine shared_edgeface(ivlist1, ivlist2, iedgeface) 
+  ! subroutine shared_edgeface(ivlist1, ivlist2, iedgeface)
   !   integer(I4B), dimension(:) :: ivlist1
   !   integer(I4B), dimension(:) :: ivlist2
   !   integer(I4B), intent(out) :: iedgeface
@@ -639,15 +639,21 @@ contains
     ! cellDefn%faceflow(2) = cellDefn%faceflow(2) + this%fmi%BoundaryFlows(ioffset+2)
     ! cellDefn%faceflow(3) = cellDefn%faceflow(3) + this%fmi%BoundaryFlows(ioffset+3)
     ! cellDefn%faceflow(4) = cellDefn%faceflow(4) + this%fmi%BoundaryFlows(ioffset+1)
-    cellDefn%faceflow(1) = cellDefn%faceflow(1) + this%fmi%BoundaryFlows(ioffset + 1) ! kluge note: should these be additive (seems so)???
-    cellDefn%faceflow(2) = cellDefn%faceflow(2) + this%fmi%BoundaryFlows(ioffset + 2)
-    cellDefn%faceflow(3) = cellDefn%faceflow(3) + this%fmi%BoundaryFlows(ioffset + 3)
-    cellDefn%faceflow(4) = cellDefn%faceflow(4) + this%fmi%BoundaryFlows(ioffset + 4)
+    cellDefn%faceflow(1) = cellDefn%faceflow(1) + &
+                           this%fmi%BoundaryFlows(ioffset + 1) ! kluge note: should these be additive (seems so)???
+    cellDefn%faceflow(2) = cellDefn%faceflow(2) + &
+                           this%fmi%BoundaryFlows(ioffset + 2)
+    cellDefn%faceflow(3) = cellDefn%faceflow(3) + &
+                           this%fmi%BoundaryFlows(ioffset + 3)
+    cellDefn%faceflow(4) = cellDefn%faceflow(4) + &
+                           this%fmi%BoundaryFlows(ioffset + 4)
     cellDefn%faceflow(5) = cellDefn%faceflow(1)
     ! cellDefn%faceflow(6) = cellDefn%faceflow(6) + this%fmi%BoundaryFlows(ioffset+5)
     ! cellDefn%faceflow(7) = cellDefn%faceflow(7) + this%fmi%BoundaryFlows(ioffset+6)
-    cellDefn%faceflow(6) = cellDefn%faceflow(6) + this%fmi%BoundaryFlows(ioffset + 9)
-    cellDefn%faceflow(7) = cellDefn%faceflow(7) + this%fmi%BoundaryFlows(ioffset + 10)
+    cellDefn%faceflow(6) = cellDefn%faceflow(6) + &
+                           this%fmi%BoundaryFlows(ioffset + 9)
+    cellDefn%faceflow(7) = cellDefn%faceflow(7) + &
+                           this%fmi%BoundaryFlows(ioffset + 10)
     !
     return
     !

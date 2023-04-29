@@ -29,7 +29,7 @@ module MethodDisvModule
     integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< ptr to zone number
   contains
     ! kluge note: must procedures like this be denoted as public (as and throughout)???
-    procedure, public :: destroy ! destructor for the method      
+    procedure, public :: destroy ! destructor for the method
     procedure, public :: init ! initializes the method
     procedure, public :: apply => apply_mGDv ! applies the DISV-grid method
     procedure, public :: pass => pass_mGDv ! passes the particle to the next cell
@@ -45,11 +45,11 @@ module MethodDisvModule
     procedure, public :: load_cellDefn_ispv180 ! loads 180-degree vertex indicator to a cell object
     procedure, public :: load_cellDefn_basic ! loads basic components to a cell object from its grid
     ! adds BoundaryFlows from grid to faceflow array of a rectangular cell
-    procedure, public :: addBoundaryFlows_cellRect 
+    procedure, public :: addBoundaryFlows_cellRect
     ! adds BoundaryFlows from the grid to the faceflow array of a rectangular-quad cell
-    procedure, public :: addBoundaryFlows_cellRectQuad 
+    procedure, public :: addBoundaryFlows_cellRectQuad
     ! adds BoundaryFlows from the grid to the faceflow array of a polygonal cell
-    procedure, public :: addBoundaryFlows_cellPoly 
+    procedure, public :: addBoundaryFlows_cellPoly
   end type MethodDisvType
 
 contains
@@ -227,7 +227,7 @@ contains
       ic = this%fmi%dis%con%ja(j + inbr)
       call create_cellDefn(cellDefn)
       ! kluge note: really only need to load facenbr and npolyverts for this
-      call this%load_cellDefn(ic, cellDefn) ! kluge  
+      call this%load_cellDefn(ic, cellDefn) ! kluge
       npolyvertsin = cellDefnin%npolyverts
       npolyverts = cellDefn%npolyverts
       if (inface .eq. npolyvertsin + 2) then
@@ -240,7 +240,7 @@ contains
         ! -- Exits and enters through shared polygon face
         j = this%fmi%dis%con%ia(ic)
         ! kluge note: use shared_edge in DisvGeom to find shared polygon face???
-        do m = 1, npolyverts + 3 
+        do m = 1, npolyverts + 3
           inbrnbr = cellDefn%facenbr(m)
           if (this%fmi%dis%con%ja(j + inbrnbr) .eq. icin) then
             inface = m
@@ -254,7 +254,7 @@ contains
         botfrom = cellDefnin%bot
         zrel = (z - botfrom) / (topfrom - botfrom)
         ! kluge note: use PRT model's DIS instead of fmi's???
-        top = this%fmi%dis%top(ic) 
+        top = this%fmi%dis%top(ic)
         bot = this%fmi%dis%bot(ic)
         sat = this%fmi%gwfsat(ic)
         z = bot + zrel * sat * (top - bot)
@@ -342,7 +342,7 @@ contains
 
   !> @brief Get top elevation based on index iatop
   !! kluge note: not needed???
-  function get_top(this, iatop) result(top) 
+  function get_top(this, iatop) result(top)
     implicit none
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
@@ -550,7 +550,7 @@ contains
   !!
   !! kluge note: based on DisvGeom shared_edge
   !<
-  subroutine shared_edgeface(ivlist1, ivlist2, iedgeface) 
+  subroutine shared_edgeface(ivlist1, ivlist2, iedgeface)
     integer(I4B), dimension(:) :: ivlist1
     integer(I4B), dimension(:) :: ivlist2
     integer(I4B), intent(out) :: iedgeface
@@ -610,7 +610,7 @@ contains
       n = cellDefn%facenbr(m)
       if (n > 0) &
         cellDefn%faceflow(m) = this%fmi%gwfflowja(this%fmi%dis%con%ia(ic) + n)
-        ! if (cellDefn%faceflow(m) < 0d0) cellDefn%inoexitface = 0
+      ! if (cellDefn%faceflow(m) < 0d0) cellDefn%inoexitface = 0
     end do
     call this%addBoundaryFlows_cellPoly(cellDefn)
     ! -- Set inoexitface flag
@@ -635,7 +635,7 @@ contains
   end subroutine load_cellDefn_flows
 
   !> @brief Load boundary flows from the grid into a rectangular cell
-  subroutine addBoundaryFlows_cellRect(this, cellDefn) 
+  subroutine addBoundaryFlows_cellRect(this, cellDefn)
     implicit none
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
@@ -652,15 +652,21 @@ contains
     ! ioffset = (ic - 1)*6
     ioffset = (ic - 1) * 10
     ! kluge note: should these be additive (seems so)???
-    cellDefn%faceflow(1) = cellDefn%faceflow(1) + this%fmi%BoundaryFlows(ioffset + 4) 
-    cellDefn%faceflow(2) = cellDefn%faceflow(2) + this%fmi%BoundaryFlows(ioffset + 2)
-    cellDefn%faceflow(3) = cellDefn%faceflow(3) + this%fmi%BoundaryFlows(ioffset + 3)
-    cellDefn%faceflow(4) = cellDefn%faceflow(4) + this%fmi%BoundaryFlows(ioffset + 1)
+    cellDefn%faceflow(1) = cellDefn%faceflow(1) + &
+                           this%fmi%BoundaryFlows(ioffset + 4)
+    cellDefn%faceflow(2) = cellDefn%faceflow(2) + &
+                           this%fmi%BoundaryFlows(ioffset + 2)
+    cellDefn%faceflow(3) = cellDefn%faceflow(3) + &
+                           this%fmi%BoundaryFlows(ioffset + 3)
+    cellDefn%faceflow(4) = cellDefn%faceflow(4) + &
+                           this%fmi%BoundaryFlows(ioffset + 1)
     cellDefn%faceflow(5) = cellDefn%faceflow(1)
     ! cellDefn%faceflow(6) = cellDefn%faceflow(6) + this%fmi%BoundaryFlows(ioffset+5)
     ! cellDefn%faceflow(7) = cellDefn%faceflow(7) + this%fmi%BoundaryFlows(ioffset+6)
-    cellDefn%faceflow(6) = cellDefn%faceflow(6) + this%fmi%BoundaryFlows(ioffset + 9)
-    cellDefn%faceflow(7) = cellDefn%faceflow(7) + this%fmi%BoundaryFlows(ioffset + 10)
+    cellDefn%faceflow(6) = cellDefn%faceflow(6) + &
+                           this%fmi%BoundaryFlows(ioffset + 9)
+    cellDefn%faceflow(7) = cellDefn%faceflow(7) + &
+                           this%fmi%BoundaryFlows(ioffset + 10)
     !
     return
     !
@@ -724,11 +730,13 @@ contains
     ! -- Bottom in position npolyverts+2
     m = m + 1
     ! cellDefn%faceflow(m) = cellDefn%faceflow(m) + this%fmi%BoundaryFlows(ioffset+5)
-    cellDefn%faceflow(m) = cellDefn%faceflow(m) + this%fmi%BoundaryFlows(ioffset + 9)
+    cellDefn%faceflow(m) = cellDefn%faceflow(m) + &
+                           this%fmi%BoundaryFlows(ioffset + 9)
     ! -- Top in position npolyverts+3
     m = m + 1
     ! cellDefn%faceflow(m) = cellDefn%faceflow(m) + this%fmi%BoundaryFlows(ioffset+6)
-    cellDefn%faceflow(m) = cellDefn%faceflow(m) + this%fmi%BoundaryFlows(ioffset + 10)
+    cellDefn%faceflow(m) = cellDefn%faceflow(m) + &
+                           this%fmi%BoundaryFlows(ioffset + 10)
     !
     return
     !
@@ -748,16 +756,22 @@ contains
     !
     ! ioffset = (ic - 1)*6
     ! kluge note: hardwired for max 8 polygon faces plus top and bottom for now
-    ioffset = (ic - 1) * 10 
+    ioffset = (ic - 1) * 10
     do iv = 1, npolyverts
       ! kluge note: should these be additive (seems so)???
-      cellDefn%faceflow(iv) = cellDefn%faceflow(iv) + this%fmi%BoundaryFlows(ioffset+iv)  
+      cellDefn%faceflow(iv) = &
+        cellDefn%faceflow(iv) + &
+        this%fmi%BoundaryFlows(ioffset + iv)
     end do
     cellDefn%faceflow(npolyverts + 1) = cellDefn%faceflow(1)
     ! cellDefn%faceflow(npolyverts+2) = cellDefn%faceflow(npolyverts+2) + this%fmi%BoundaryFlows(ioffset+npolyverts+1)
     ! cellDefn%faceflow(npolyverts+3) = cellDefn%faceflow(npolyverts+3) + this%fmi%BoundaryFlows(ioffset+npolyverts+2)
-    cellDefn%faceflow(npolyverts+2) = cellDefn%faceflow(npolyverts+2) + this%fmi%BoundaryFlows(ioffset+9)
-    cellDefn%faceflow(npolyverts+3) = cellDefn%faceflow(npolyverts+3) + this%fmi%BoundaryFlows(ioffset+10)
+    cellDefn%faceflow(npolyverts + 2) = &
+      cellDefn%faceflow(npolyverts + 2) + &
+      this%fmi%BoundaryFlows(ioffset + 9)
+    cellDefn%faceflow(npolyverts + 3) = &
+      cellDefn%faceflow(npolyverts + 3) + &
+      this%fmi%BoundaryFlows(ioffset + 10)
     !
     return
     !
@@ -781,7 +795,8 @@ contains
     integer :: ic
     integer :: num90, num180, numacute
     double precision :: x0, y0, x1, y1, x2, y2
-    double precision :: epsang,epslen,s0x,s0y,s0mag,s2x,s2y,s2mag,sinang,dotprod
+    double precision :: epsang, epslen, s0x, s0y, &
+      s0mag, s2x, s2y, s2mag, sinang, dotprod
     logical last180
     !
     ic = cellDefn%icell
@@ -804,9 +819,9 @@ contains
     num180 = 0
     numacute = 0
     last180 = .false.
-    ! kluge note: assumes non-self-intersecting polygon; 
+    ! kluge note: assumes non-self-intersecting polygon;
     ! no checks for self-intersection (e.g., star)
-    do m = 1, npolyverts 
+    do m = 1, npolyverts
       m1 = m
       if (m1 .eq. 1) then
         m0 = npolyverts
@@ -832,7 +847,7 @@ contains
       s2mag = dsqrt(s2x * s2x + s2y * s2y)
       sinang = (s0x * s2y - s0y * s2x) / (s0mag * s2mag)
       ! kluge note: is it better to check in terms of angle rather than sin{angle}???
-      if (dabs(sinang) .lt. epsang) then 
+      if (dabs(sinang) .lt. epsang) then
         dotprod = s0x * s2x + s0y * s2y
         if (dotprod .gt. 0d0) then
           print *, "Cell ", ic, " has a zero angle" ! kluge
@@ -841,19 +856,21 @@ contains
           stop
         else
           if (last180) then
-            print *, "Cell ", ic, " has consecutive 180-deg angles - not supported" ! kluge
+            print *, "Cell ", ic, &
+              " has consecutive 180-deg angles - not supported" ! kluge
             print *, "      (tolerance epsang = ", epsang, ")"
             !!pause
             stop
           else if (dabs((s2mag - s0mag) / max(s2mag, s0mag)) .gt. epslen) then
-            print *, "Cell ", ic, " has a non-bisecting 180-deg vertex - not supported" ! kluge
+            print *, "Cell ", ic, &
+              " has a non-bisecting 180-deg vertex - not supported" ! kluge
             print *, "      (tolerance epslen = ", epslen, ")"
             !!pause
             stop
           end if
           ! kluge note: want to evaluate 180-deg vertex using one criterion implemented in
           ! one place (procedure) to avoid potential disparities between multiple checks
-          num180 = num180 + 1 
+          num180 = num180 + 1
           last180 = .true.
           cellDefn%ispv180(m) = .true.
         end if
@@ -862,14 +879,16 @@ contains
         if (dabs(1d0 - sinang) .lt. epsang) num90 = num90 + 1
         last180 = .false.
       else
-        print *, "Cell ", ic, " has an obtuse angle and so is nonconvex" ! kluge
+        print *, "Cell ", ic, &
+          " has an obtuse angle and so is nonconvex" ! kluge
         print *, "      (tolerance epsang = ", epsang, ")"
         !!pause
         stop
       end if
     end do
     if ((num90 .ne. 4) .and. (num180 .ne. 0)) then
-      print *, "Cell ", ic, " is a non-rectangle with a 180-deg angle - not supported" ! kluge
+      print *, "Cell ", ic, &
+        " is a non-rectangle with a 180-deg angle - not supported" ! kluge
       print *, "      (tolerance epsang = ", epsang, ")"
       ! pause
       stop
