@@ -12,7 +12,7 @@ tests = [
 ]
 
 test_srcs = files(
-  'testdrive.f90',
+  'testdrive.F90',
   'driver.f90',
 )
 foreach t : tests
