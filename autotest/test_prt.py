@@ -761,7 +761,7 @@ class PrtCases:
     ]
 
     @staticmethod
-    def get_refined_gridprops_p02(ws: Path, ctx) -> dict:
+    def get_refined_gridprops_p02(ws: Path, ctx, exe) -> dict:
         ms = flopy.modflow.Modflow()
         dis = flopy.modflow.ModflowDis(
             ms,
@@ -781,7 +781,7 @@ class PrtCases:
         gridgen_ws.mkdir(parents=True, exist_ok=True)
 
         # create Gridgen object
-        g = Gridgen(ms.modelgrid, model_ws=gridgen_ws)
+        g = Gridgen(ms.modelgrid, model_ws=gridgen_ws, exe_name=exe)
 
         # add polygon for each refinement level
         outer_polygon = [
@@ -861,7 +861,7 @@ class PrtCases:
         porosity = 0.1
         
         # todo build/refine grid
-        disv_props = PrtCases.get_refined_gridprops_p02(function_tmpdir / "gridgen", ctx)
+        disv_props = PrtCases.get_refined_gridprops_p02(function_tmpdir / "gridgen", ctx, targets.gridgen)
 
         # retrieve GRIDGEN-generated gridprops
         ncpl = disv_props["ncpl"]
