@@ -63,6 +63,7 @@ module PrtPrpModule
     logical(LGP), pointer :: rls_first => null() !< flag for release on first time step in period
     logical(LGP), pointer :: rls_all => null() !< flag for release on all time steps in period
     logical(LGP), pointer :: rls_any => null() !< flag that indicates whether any release in period
+    real(DP), pointer :: rls_frac => null() !< time step fraction for release on all time steps in period
     logical(LGP), pointer :: noperiodblocks => null() !< flag indicating if there are no period blocks in sim
     integer(I4B), pointer :: itrack1 => null() ! pointer to start of prp track data
     integer(I4B), pointer :: itrack2 => null() ! pointer to end of prp track data
@@ -86,6 +87,7 @@ module PrtPrpModule
     procedure :: prp_read_packagedata
     ! procedure :: read_data
     procedure :: sav_particles
+    procedure :: get_max_particles
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => prp_obs_supported
     procedure, public :: bnd_df_obs => prp_df_obs
@@ -161,6 +163,7 @@ contains
     call mem_deallocate(this%idrape)
     call mem_deallocate(this%nreleasepts)
     call mem_deallocate(this%ifreq_rls)
+    call mem_deallocate(this%rls_frac)
     call mem_deallocate(this%rls_first)
     call mem_deallocate(this%rls_all)
     call mem_deallocate(this%rls_any)
@@ -270,9 +273,6 @@ contains
     allocate (this%partlist%x(this%npartmax)) ! kluge note: nprtmax is the initial max dimension
     allocate (this%partlist%y(this%npartmax)) ! kluge note: use mem_allocate for these arrays
     allocate (this%partlist%z(this%npartmax))
-    ! allocate(this%partlist%xlocal(this%npartmax))
-    ! allocate(this%partlist%ylocal(this%npartmax))
-    ! allocate(this%partlist%zlocal(this%nreleasepts))
     ! kluge note: ditch crazy dims
     allocate (this%partlist%iTrackingDomain(this%npartmax, &
                                             levelMin:levelMax))
@@ -321,6 +321,7 @@ contains
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
     call mem_allocate(this%nreleasepts, 'NRELEASEPTS', this%memoryPath)
     call mem_allocate(this%ifreq_rls, 'IFREQ_RLS', this%memoryPath)
+    call mem_allocate(this%rls_frac, 'RLS_FRAC ', this%memoryPath)
     call mem_allocate(this%rls_first, 'RLS_FIRST', this%memoryPath)
     call mem_allocate(this%rls_all, 'RLS_ALL', this%memoryPath)
     call mem_allocate(this%rls_any, 'RLS_ANY', this%memoryPath)
@@ -338,6 +339,7 @@ contains
     this%idrape = 0
     this%nreleasepts = 0
     this%ifreq_rls = 0
+    this%rls_frac = 0.0_DP
     this%rls_first = .false.
     this%rls_all = .false.
     this%rls_any = .false.
@@ -390,7 +392,8 @@ contains
   !<
   subroutine prp_ad(this)
     ! -- modules
-    use TdisModule, only: kstp, totimc
+    use TdisModule, only: kstp, totimc, delt
+    use ParticleModule, only: resize_particle_list
     ! -- dummy
     class(PrtPrpType) :: this
     ! -- local
@@ -399,6 +402,7 @@ contains
     real(DP) :: trelease, tstop ! kluge?
     ! real(DP) :: top, bot, sat
     logical(LGP) :: isRelease
+
     !
     ! -- Reset particle mass released for time step
     do nps = 1, this%nreleasepts
@@ -410,33 +414,42 @@ contains
       return
     end if
 
-    ! -- Check if there is to be a release at the start of this time step
+    ! -- Check if there is to be a release in this time step.
+    !    todo: factor out a subroutine?
     isRelease = .false.
+
     ! -- release all time steps
     if (this%rls_all) then
       isRelease = .true.
-    else
-      ! -- release on the first time step
-      if (this%rls_first) then
-        if (kstp == 1) isRelease = .true.
-      end if
+
+      ! -- release only on the first time step
+    else if (this%rls_first) then
+      if (kstp == 1) isRelease = .true.
+
       ! -- release only after every this%ifreq_rls time steps elapse
-      if (this%ifreq_rls > 0) then
-        if ((kstp / this%ifreq_rls) * this%ifreq_rls == kstp) & ! kluge note: use modulo?
-          isRelease = .true.
-      end if
-      ! -- ???
+    else if (this%ifreq_rls > 0) then
+      if ((kstp / this%ifreq_rls) * this%ifreq_rls == kstp) & ! kluge note: use modulo?
+        isRelease = .true.
+
+      ! -- release on specified time steps
+    else
       n = size(this%kstp_list_rls)
       if (n > 0) then
         do i = 1, n
-          ! kluge note: store advancing counter to avoid re-searching entire array each time?
           if (this%kstp_list_rls(i) == kstp) isRelease = .true.
         end do
       end if
     end if
-    !
+
     ! -- Do the release, if there is one
     if (isRelease) then
+
+      ! resize particle arrays if needed
+      if (this%npart + this%nreleasepts > this%npartmax) then
+        this%npartmax = this%npartmax + this%nreleasepts
+        call resize_particle_list(this%partlist, this%npartmax)
+      end if
+
       do nps = 1, this%nreleasepts
         ic = this%noder(nps) ! reduced node number (cell ID)
         ! -- If drape option activated, release particle in highest active
@@ -452,7 +465,17 @@ contains
         end if
         np = this%npart + 1 ! particle index
         this%npart = np ! ???
-        trelease = totimc ! release time
+
+        ! -- kluge: make sure release fraction is between 0 and 1
+        ! -- if not, should we terminate with error instead?
+        if (this%rls_frac < 0d0) this%rls_frac = 0d0
+        if (this%rls_frac > 1d0) this%rls_frac = 1d0
+
+        if (this%rls_frac > 0d0) then
+          trelease = totimc + this%rls_frac * delt ! release at fraction of time step
+        else
+          trelease = totimc ! release at beginning of time step
+        end if
 
         ! -- Set stopping time to earlier of times specified by STOPTIME and STOPTRAVELTIME
         if (this%stoptraveltime == huge(1d0)) then ! kluge huge?
@@ -526,7 +549,8 @@ contains
       !
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
@@ -569,6 +593,7 @@ contains
         if (allocated(this%kstp_list_rls)) deallocate (this%kstp_list_rls)
         allocate (this%kstp_list_rls(0))
         this%ifreq_rls = 0
+        this%rls_frac = 0.0_DP
         this%rls_first = .true.
         this%rls_all = .false.
         this%rls_any = .true.
@@ -584,6 +609,7 @@ contains
       if (allocated(this%kstp_list_rls)) deallocate (this%kstp_list_rls)
       allocate (this%kstp_list_rls(0))
       this%ifreq_rls = 0
+      this%rls_frac = 0.0_DP
       this%rls_first = .false.
       this%rls_all = .false.
       this%rls_any = .false.
@@ -620,6 +646,10 @@ contains
           ival = this%parser%GetInteger() ! kluge note: check for nonnegative
           this%ifreq_rls = ival
           this%rls_any = .true.
+        case ('FRACTION')
+          rval = this%parser%GetDouble() ! kluge note: check for nonnegative
+          this%rls_frac = rval
+          this%rls_any = .true.
         case ('FIRST')
           this%rls_first = .true.
           this%rls_any = .true.
@@ -644,11 +674,24 @@ contains
       write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
         'FROM LAST STRESS PERIOD'
     else if (this%rls_all) then
-      write (this%iout, "(1x,/1x,a)") 'PARTICLE RELEASE SCHEDULED AT THE '// &
-        'START OF ALL TIME STEPS IN STRESS PERIOD'
+      if (this%rls_frac > 0.0_DP) then
+        write (this%iout, "(1x,/1x,a,f10.3)") 'PARTICLE RELEASE SCHEDULED '// &
+          'FOR ALL TIME STEPS IN STRESS PERIOD, AT TIME STEP FRACTION = ', &
+          this%rls_frac
+      else
+        write (this%iout, "(1x,/1x,a)") 'PARTICLE RELEASE SCHEDULED AT THE '// &
+          'START OF ALL TIME STEPS IN STRESS PERIOD'
+      end if
     else
-      write (this%iout, "(1x,/1x,a)") 'PARTICLE RELEASE SCHEDULED AT THE '// &
-        'START OF EACH TIME STEP THAT MATCHES ONE OR MORE OF THE FOLLOWING:'
+      if (this%rls_frac > 0.0_DP) then
+        write (this%iout, "(1x,/1x,a,f10.3)") 'PARTICLE RELEASE SCHEDULED '// &
+          ' AT TIME STEP FRACTION = ', this%rls_frac
+        write (this%iout, "(1x,/1x,a)") &
+          ' FOR ALL TIME STEPS THAT MATCH ONE OR MORE OF THE FOLLOWING:'
+      else
+        write (this%iout, "(1x,/1x,a)") 'PARTICLE RELEASE SCHEDULED AT THE '// &
+          'START OF EACH TIME STEP THAT MATCHES ONE OR MORE OF THE FOLLOWING:'
+      end if
       if (this%rls_first) write (this%iout, "(6x,a)") 'FIRST TIME STEP '// &
         '(START OF STRESS PERIOD)'
       if (this%ifreq_rls > 0) write (this%iout, fmt_freq) this%ifreq_rls
@@ -1092,6 +1135,40 @@ contains
     ! -- return
     return
   end subroutine prp_read_dimensions
+
+  subroutine get_max_particles(this, maxpart)
+    ! -- modules
+    use TdisModule, only: kper, nstp
+    ! -- dummy
+    class(PrtPrpType) :: this
+    integer(I4B), intent(out) :: maxpart
+    ! -- local
+    integer(I4B) :: n_steps
+    !
+    ! by default, result is the number of release points,
+    ! since default is to only release on first time step
+    maxpart = this%nreleasepts
+    !
+    ! get # of steps in release list
+    n_steps = size(this%kstp_list_rls)
+    !
+    ! if we are releasing for all time steps, then
+    ! multiply maxpart by the number of time steps
+    if (this%rls_all) then
+      maxpart = maxpart * nstp(kper)
+      ! if we are releasing for a specified frequency
+      ! then multiply maxpart by number of time steps
+      ! divided by the specified release frequency
+    else if (this%ifreq_rls > 0) then
+      maxpart = maxpart * nstp(kper) / this%ifreq_rls
+      ! if we are releasing for specified time steps,
+      ! then multiply maxpart by the number of steps
+    else if (n_steps > 0) then
+      maxpart = maxpart * n_steps
+    end if
+    !
+    return
+  end subroutine get_max_particles
 
   !> @brief Save particle information in binary format to icbcun
   !<

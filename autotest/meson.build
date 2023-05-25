@@ -4,11 +4,13 @@ tests = [
   'Sim',
   'InputOutput',
   'GenericUtils',
+  'ArrayHandlers',
   'prt_UtilMisc',
   'prt_CellUtil',
   'prt_MethodSubcellPollock',
   'prt_TernaryUtil',
-  'prt_TernarySolveTrack'
+  'prt_TernarySolveTrack',
+  'prt_Particle'
 ]
 
 test_srcs = files(

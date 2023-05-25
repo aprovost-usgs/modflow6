@@ -1,12 +1,14 @@
 module ParticleModule
 
   use GlobalDataModule
+  use KindModule, only: DP, I4B, LGP
   implicit none
 
   private
   public :: ParticleType
   public :: ParticleListType
   public :: create_particle
+  public :: resize_particle_list
 
   ! -- Define the particle type (ParticleType)
   type ParticleType
@@ -78,5 +80,44 @@ contains
     deallocate (this%iTrackingDomainBoundary)
     return
   end subroutine destroy_particle
+
+  subroutine resize_particle_list(particles, npartmax)
+    ! -- modules
+    use ArrayHandlersModule, only: ExpandArray, ExpandArray2D
+    ! -- dummy
+    type(ParticleListType), pointer, intent(inout) :: particles
+    integer(I4B), intent(in) :: npartmax
+    ! -- locals
+    integer(I4B), allocatable, dimension(:, :) :: array_temp_2d
+    !
+    ! resize 1D arrays in the particle list
+    call ExpandArray(particles%x, size(particles%x - npartmax))
+    call ExpandArray(particles%y, size(particles%y - npartmax))
+    call ExpandArray(particles%z, size(particles%z - npartmax))
+    call ExpandArray(particles%trelease, size(particles%trelease - npartmax))
+    call ExpandArray(particles%tstop, size(particles%tstop - npartmax))
+    call ExpandArray(particles%ttrack, size(particles%ttrack - npartmax))
+    call ExpandArray(particles%istopweaksink, &
+                     size(particles%istopweaksink - npartmax))
+    call ExpandArray(particles%istopzone, size(particles%istopzone - npartmax))
+    call ExpandArray(particles%istatus, size(particles%istatus - npartmax))
+    call ExpandArray(particles%irpt, size(particles%irpt - npartmax))
+    !
+    ! resize first dimension of 2D arrays by hand
+    ! instead of ExpandArray2D because the second
+    ! dimension starts with index 0, not 1... see
+    ! levelMin and levelMax in GlobalDataModule
+    allocate (array_temp_2d(npartmax, 0:4))
+    array_temp_2d(1:size(particles%iTrackingDomain, 1), 0:4) = &
+      particles%iTrackingDomain
+    call move_alloc(array_temp_2d, particles%iTrackingDomain)
+    !
+    allocate (array_temp_2d(npartmax, 0:4))
+    array_temp_2d(1:size(particles%iTrackingDomainBoundary, 1), 0:4) = &
+      particles%iTrackingDomainBoundary
+    call move_alloc(array_temp_2d, particles%iTrackingDomainBoundary)
+    !
+    return
+  end subroutine resize_particle_list
 
 end module ParticleModule

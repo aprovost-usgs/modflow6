@@ -156,6 +156,17 @@ longname stress period number
 description integer value specifying the stress period number for which the data specified in the PERIOD block apply. IPER must be less than or equal to NPER in the TDIS Package and greater than zero. The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block. The information specified in the PERIOD block applies only to that stress period.
 
 block period
+name fraction
+type double precision
+shape
+tagged true
+in_record true
+reader urword
+optional true
+longname time step fraction
+description release particles after the specified fraction of the time step has elapsed. This option may be used to release particles within, rather than at the start, of time steps. If this option is not set, particles are released at the start of the specified time step(s).
+
+block period
 name perioddata
 type recarray releasesetting
 shape
@@ -210,3 +221,4 @@ in_record true
 reader urword
 longname
 description release particles at the start of each step specified in STEPS. This keyword may be used in conjunction with other keywords to release particles at the start of multiple time steps.
+
