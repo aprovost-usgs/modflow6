@@ -201,8 +201,9 @@ cases = {
     "none": None,
     "first": {0: ["FIRST"]},
     "first_first": {0: ["FIRST"], 1: ["FIRST"]},
-    # "fraction": {0: ["FRACTION", 0.5], 1: ["FRACTION", 0.5]},
-    # "first_frac": {0: [("FIRST"), ("FRACTION", 0.5)]},  # todo debug flopy, hangs and doesn't write prp file
+    # "frac": {0: ["FRACTION", 0.5]},
+    # "frac_frac": {0: ["FRACTION", 0.5], 1: ["FRACTION", 0.5]},
+    # "first_frac": {0: ["FIRST", "FRACTION", 0.5]},  # todo debug flopy, hangs and doesn't write prp file
     "all": {0: ["ALL"]},
     "all_all": {0: ["ALL"], 1: ["ALL"]},
     # "all_frac": {0: ["ALL", ("FRACTION", 0.5)]},  # todo debug flopy, hangs and doesn't write prp file

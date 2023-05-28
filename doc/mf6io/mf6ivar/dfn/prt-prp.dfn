@@ -158,13 +158,13 @@ description integer value specifying the stress period number for which the data
 block period
 name fraction
 type double precision
-shape
+shape (<nstp)
 tagged true
 in_record true
 reader urword
 optional true
 longname time step fraction
-description release particles after the specified fraction of the time step has elapsed. This option may be used to release particles within, rather than at the start, of time steps. If this option is not set, particles are released at the start of the specified time step(s).
+description release particles after the specified fraction of the time step has elapsed. This option may be used to release particles within, rather than at the start, of time steps. If this option is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps.
 
 block period
 name perioddata
@@ -221,4 +221,3 @@ in_record true
 reader urword
 longname
 description release particles at the start of each step specified in STEPS. This keyword may be used in conjunction with other keywords to release particles at the start of multiple time steps.
-
