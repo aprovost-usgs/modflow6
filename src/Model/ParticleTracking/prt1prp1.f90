@@ -538,11 +538,11 @@ contains
                       "('Looking for BEGIN PERIOD iper.  &
                       &Found ', a, ' instead.')"
     character(len=*), parameter :: fmt_steps = &
-                                   "(6x,'TIME STEP(S) ',50(I0,' '))" ! kluge 50 (similar to STEPS in OC)?
+                                   "(1x,'IN TIME STEP(S) ',50(I0,' '))" ! kluge 50 (similar to STEPS in OC)?
     character(len=*), parameter :: fmt_freq = &
-                                   "(6x,'EVERY ',I0,' TIME STEP(S)')"
+                                   "(1x,'EVERY ',I0,' TIME STEP(S)')"
     character(len=*), parameter :: fmt_fracs = &
-                                   "(6x,50(f10.3,' '))" ! kluge 50 (similar to STEPS in OC)?
+                                   "(1x,50(f10.5,' '),/)" ! kluge 50 (similar to STEPS in OC)?
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
@@ -666,15 +666,15 @@ contains
             end if
             ! -- parse the next value
             call urword(line, lloc, istart, istop, 3, ival, rval, -1, 0)
-            ! -- if istart == istop, we didn't find another value, done parsing
+            ! -- if istart == istop, no more values, done parsing
             if (istart == istop) exit fraclistsearch
-            ! -- terminate with error if the fraction is not between 0 and 1
+            ! -- terminate with error if not between 0 and 1
             if (rval < 0.0_DP .or. rval > 1.0_DP) then
               write (errmsg, '(2a, f12.6)') &
                 'FRACTION must be between 0 and 1. Found: ', rval
               call store_error(errmsg, terminate=.TRUE.)
             end if
-            ! -- populatee list from parsed values, expanding as needed
+            ! -- populate parsed values, expanding array as needed
             n = size(this%frac_list_rls)
             call expandarray(this%frac_list_rls)
             this%frac_list_rls(n + 1) = rval
@@ -695,8 +695,8 @@ contains
     else
       rls_lsp = .true.
     end if
-    ! -- if using STEPS option, make sure FRACTION has either 1 element
-    !    or the same number of elements as STEPS
+    ! -- if using STEPS, FRACTION must have 1 element
+    !    or the same number as STEPS
     if (size(this%kstp_list_rls) > 0 .and. .not. ( &
         (size(this%frac_list_rls) == 1) .or. &
         (size(this%frac_list_rls) == size(this%kstp_list_rls))) &
@@ -714,22 +714,24 @@ contains
     else if (rls_lsp) then
       write (this%iout, "(1x,/1x,a)") 'REUSING PARTICLE RELEASE SETTINGS '// &
         'FROM LAST STRESS PERIOD'
-    else if (this%rls_all) then
-      write (this%iout, "(1x,/1x,a,f10.3)") 'PARTICLE RELEASE SCHEDULED '// &
-        'FOR ALL TIME STEPS IN STRESS PERIOD, AT TIME STEP FRACTION = ', &
-        this%frac_list_rls(1)
     else
-      write (this%iout, "(1x,/1x,a)") 'PARTICLE RELEASE SCHEDULED '// &
-        'AT TIME STEP FRACTION(S) = '
+      ! -- write particle release setting
+      write (this%iout, "(1x,/1x,a)", advance='no') 'PARTICLE RELEASE'
+      if (this%rls_first) then
+        write (this%iout, "(1x,a)", advance='no') 'IN FIRST TIME STEP'
+      else if (this%rls_all) then
+        write (this%iout, "(1x,a)", advance='no') 'IN ALL TIME STEPS'
+      else if (this%ifreq_rls > 0) then
+        write (this%iout, fmt_freq, advance='no') this%ifreq_rls
+      else
+        n = size(this%kstp_list_rls)
+        if (n > 0) write (this%iout, fmt_steps, advance='no') this%kstp_list_rls
+      end if
+      ! -- write time step fraction(s)
+      write (this%iout, "(1x,a)", advance='no') 'AT FRACTION(S)'
       n = size(this%frac_list_rls)
       if (n > 0) write (this%iout, fmt_fracs) this%frac_list_rls
-      write (this%iout, "(1x,/1x,a)") &
-        ' FOR ALL TIME STEPS THAT MATCH ONE OR MORE OF THE FOLLOWING:'
-      if (this%rls_first) write (this%iout, "(6x,a)") 'FIRST TIME STEP '// &
-        '(START OF STRESS PERIOD)'
-      if (this%ifreq_rls > 0) write (this%iout, fmt_freq) this%ifreq_rls
-      n = size(this%kstp_list_rls)
-      if (n > 0) write (this%iout, fmt_steps) this%kstp_list_rls
+      write (this%iout, '(A)')
     end if
     !
     ! -- return
