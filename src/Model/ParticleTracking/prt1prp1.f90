@@ -1,9 +1,11 @@
 module PrtPrpModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LINELENGTH, &
-                             LENBOUNDNAME
+                             LENBOUNDNAME, LENPAKLOC, TABLEFT, TABCENTER, &
+                             MNORMAL
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
+  use TableModule, only: TableType, table_cr
   use TimeSeriesModule, only: TimeSeriesType
   use TimeSeriesRecordModule, only: TimeSeriesRecordType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -67,8 +69,12 @@ module PrtPrpModule
     integer(I4B), pointer :: itrack1 => null() ! pointer to start of prp track data
     integer(I4B), pointer :: itrack2 => null() ! pointer to end of prp track data
     type(TrackDataType), pointer :: trackdata => null() ! pointer to model track data
+    integer(I4B), pointer :: itrkout => null()
+    integer(I4B), pointer :: itrkhdr => null()
+    integer(I4B), pointer :: itrkcsv => null()
 
   contains
+
     procedure :: prp_allocate_arrays
     procedure :: prp_allocate_scalars
     procedure :: bnd_ar => prp_ar
@@ -80,6 +86,7 @@ module PrtPrpModule
     procedure :: bnd_cq_simrate => prp_cq_simrate
     procedure :: bnd_da => prp_da
     procedure :: define_listlabel
+    procedure :: prp_ot_trk
     procedure :: prp_set_pointers ! kluge?
     procedure :: bnd_options => prp_options
     procedure :: read_dimensions => prp_read_dimensions
@@ -91,13 +98,12 @@ module PrtPrpModule
     procedure, public :: bnd_df_obs => prp_df_obs
     ! ! -- methods for time series
     ! procedure, public :: bnd_rp_ts => prp_rp_ts
+    procedure, private :: prp_track_write
   end type PrtPrpType
 
 contains
 
-  !> @brief Createa new particle release package
-  !!
-  !<
+  !> @brief Create a new particle release package
   subroutine prp_create(packobj, id, ibcnum, inunit, iout, namemodel, &
                         pakname, fmi)
     ! -- dummy
@@ -167,6 +173,9 @@ contains
     call mem_deallocate(this%noperiodblocks)
     call mem_deallocate(this%npart)
     call mem_deallocate(this%npartmax)
+    call mem_deallocate(this%itrkout)
+    call mem_deallocate(this%itrkhdr)
+    call mem_deallocate(this%itrkcsv)
     !
     ! -- arrays
     call mem_deallocate(this%noder)
@@ -211,23 +220,14 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), pointer :: itrack1
     integer(I4B), pointer :: itrack2
-    ! integer(I4B), dimension(:), pointer :: iptrack
-    ! real(DP), dimension(:), pointer :: xtrack       ! kluge
-    ! real(DP), dimension(:), pointer :: ytrack
-    ! real(DP), dimension(:), pointer :: ztrack
-    ! real(DP), dimension(:), pointer :: ttrack
     type(TrackDataType), pointer :: trackdata
     !
     ! -- Set pointer to PRT model ibound
     this%ibound => ibound
+    !
     ! -- Set pointers to track data
     this%itrack1 => itrack1
     this%itrack2 => itrack2
-    ! this%iptrack => iptrack
-    ! this%xtrack => xtrack
-    ! this%ytrack => ytrack
-    ! this%ztrack => ztrack
-    ! this%ttrack => ttrack
     this%trackdata => trackdata
     !
     ! -- return
@@ -270,9 +270,6 @@ contains
     allocate (this%partlist%x(this%npartmax)) ! kluge note: nprtmax is the initial max dimension
     allocate (this%partlist%y(this%npartmax)) ! kluge note: use mem_allocate for these arrays
     allocate (this%partlist%z(this%npartmax))
-    ! allocate(this%partlist%xlocal(this%npartmax))
-    ! allocate(this%partlist%ylocal(this%npartmax))
-    ! allocate(this%partlist%zlocal(this%nreleasepts))
     ! kluge note: ditch crazy dims
     allocate (this%partlist%iTrackingDomain(this%npartmax, &
                                             levelMin:levelMax))
@@ -327,6 +324,9 @@ contains
     call mem_allocate(this%noperiodblocks, 'NOPERIODBLOCKS', this%memoryPath)
     call mem_allocate(this%npart, 'NPART', this%memoryPath)
     call mem_allocate(this%npartmax, 'NPARTMAX', this%memoryPath)
+    call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
+    call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
+    call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     !
     ! -- Set values
     this%stoptime = huge(1d0) ! kluge???
@@ -344,6 +344,9 @@ contains
     this%noperiodblocks = .false.
     this%npart = 0
     this%npartmax = 0
+    this%itrkout = 0
+    this%itrkhdr = 0
+    this%itrkcsv = 0
     !
     ! -- return
     return
@@ -526,7 +529,8 @@ contains
       !
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
@@ -779,12 +783,23 @@ contains
   !> @brief Set options specific to PrtPrpType (overrides BndType%bnd_options)
   !<
   subroutine prp_options(this, option, found)
+    use OpenSpecModule, only: access, form
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option
     logical, intent(inout) :: found
+    ! -- locals
+    character(len=MAXCHARLEN) :: fname
+    character(len=MAXCHARLEN) :: keyword
+    ! -- formats
+    character(len=*), parameter :: fmttrkbin = &
+      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
+    &'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmttrkcsv = &
+      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO CSV FILE: ', a, /4x, &
+    &'OPENED ON UNIT: ', I0)"
     !
     ! ! -- reinitialize stoptime and stoptraveltime to huge    ! kluge?
     ! this%stoptime = huge(1d0)
@@ -818,7 +833,47 @@ contains
     case ('DRAPE')
       this%idrape = 1
       found = .true.
-
+    case ('TRACK')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        ! parse filename
+        call this%parser%GetString(fname)
+        ! open binary output file
+        this%itrkout = getunit()
+        call openfile(this%itrkout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, filstat_opt='REPLACE', &
+                      mode_opt=MNORMAL)
+        write (this%iout, fmttrkbin) trim(adjustl(fname)), this%itrkout
+        ! open and write ascii header spec file
+        this%itrkhdr = getunit()
+        fname = trim(fname)//'.hdr'
+        call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE', mode_opt=MNORMAL)
+        write (this%itrkhdr, '(a,/,a)') &
+          'kper,kstp,prpid,partid,cellid,status,reason,t,x,y,z', &
+          '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<f8,<f8,<f8,<f8'
+      else
+        call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
+                         'FOLLOWED BY FILEOUT')
+      end if
+      found = .true.
+    case ('TRACKCSV')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        ! parse filename
+        call this%parser%GetString(fname)
+        ! open CSV output file and write headers
+        this%itrkcsv = getunit()
+        call openfile(this%itrkcsv, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE')
+        write (this%iout, fmttrkcsv) trim(adjustl(fname)), this%itrkcsv
+        write (this%itrkcsv, '(a)') &
+          'kper,kstp,prpid,partid,cellid,status,reason,t,x,y,z'
+      else
+        call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
+          &FOLLOWED BY FILEOUT')
+      end if
+      found = .true.
     case default
       found = .false.
     end select
@@ -1035,6 +1090,7 @@ contains
     return
   end subroutine prp_read_packagedata
 
+  !> @brief Read package dimensions
   subroutine prp_read_dimensions(this)
     ! -- modules
     use SimModule, only: store_error
@@ -1093,6 +1149,61 @@ contains
     return
   end subroutine prp_read_dimensions
 
+  !> @brief Save particle track data to an output file
+  subroutine prp_ot_trk(this, itrksave)
+    ! -- dummy variables
+    class(PrtPrpType), intent(inout) :: this
+    integer(I4B), intent(in) :: itrksave
+    !
+    ! -- write particle track data to binary output file
+    if (this%itrkout /= 0 .and. itrksave /= 0) then
+      call this%prp_track_write(this%itrkout, csv=.false.)
+    end if
+    !
+    ! -- write particle track data to CSV output file
+    if (this%itrkcsv /= 0 .and. itrksave /= 0) then
+      call this%prp_track_write(this%itrkcsv, csv=.true.)
+    end if
+    !
+    return
+  end subroutine prp_ot_trk
+
+  !> @brief Write track data to a binary or CSV output file
+  subroutine prp_track_write(this, itrkun, csv)
+    ! -- modules
+    use InputOutputModule, only: save_particle_track_datum
+    ! -- dummy
+    class(PrtPrpType), intent(inout) :: this
+    integer(I4B) :: itrkun
+    logical(LGP), intent(in) :: csv
+    ! -- local
+    integer(I4B) :: itrack
+    integer(I4B) :: kper, kstp
+    integer(I4B) :: ipartid, iprpid, icellid, istatus, ireason ! todo izoneno
+    real(DP) :: t, x, y, z
+    !
+    ! -- loop over particle track data
+    do itrack = this%itrack1 + 1, this%itrack2
+      kper = this%trackdata%kper(itrack)
+      kstp = this%trackdata%kstp(itrack)
+      iprpid = this%trackdata%iprpid(itrack)
+      ipartid = this%trackdata%ipartid(itrack)
+      icellid = this%trackdata%icellid(itrack)
+      istatus = this%trackdata%istatus(itrack)
+      ireason = this%trackdata%ireason(itrack)
+      t = this%trackdata%t(itrack)
+      x = this%trackdata%x(itrack)
+      y = this%trackdata%y(itrack)
+      z = this%trackdata%z(itrack)
+
+      ! write row to file
+      call save_particle_track_datum(itrkun, csv, &
+                                     kper, kstp, &
+                                     iprpid, ipartid, icellid, istatus, ireason, &
+                                     t, x, y, z)
+    end do
+  end subroutine prp_track_write
+
   !> @brief Save particle information in binary format to icbcun
   !<
   subroutine sav_particles(this, icbcun)
@@ -1131,14 +1242,14 @@ contains
       !
       ! -- Write a zero for Q, and then write particle x, y, z as aux variables
       do itrack = this%itrack1 + 1, this%itrack2
-        ip = this%trackdata%iptrack(itrack)
-        icell = this%trackdata%ictrack(itrack)
+        ip = this%trackdata%ipartid(itrack)
+        icell = this%trackdata%icellid(itrack)
         irpt = this%partlist%irpt(ip)
-        aux(1) = this%trackdata%xtrack(itrack)
-        aux(2) = this%trackdata%ytrack(itrack)
-        aux(3) = this%trackdata%ztrack(itrack)
+        aux(1) = this%trackdata%x(itrack)
+        aux(2) = this%trackdata%y(itrack)
+        aux(3) = this%trackdata%z(itrack)
         aux(4) = this%partlist%trelease(ip)
-        aux(5) = this%trackdata%ttrack(itrack)
+        aux(5) = this%trackdata%t(itrack)
         call this%dis%record_mf6_list_entry(icbcun, irpt, icell, DZERO, &
                                             naux, aux)
       end do

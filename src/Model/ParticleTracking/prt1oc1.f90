@@ -55,8 +55,8 @@ contains
 
   !> @ brief Allocate and read PrtOcType
   !!
-  !!  Setup concentration and budget as output control variables.
-  !!
+  !!  Setup concentration, budget, and particle tracks as output control variables.
+  !!  todo: how to pass track data to OC? each column as an array via init_dbl etc?
   !<
   subroutine oc_ar(this, conc, dis, dnodata)
     ! -- dummy

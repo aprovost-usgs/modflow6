@@ -3,6 +3,7 @@ from pathlib import Path
 import flopy
 from matplotlib import pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 from pathlib import Path
 from modflow_devtools.case import Case
@@ -14,7 +15,8 @@ from shapely.geometry import MultiPoint, LineString
 from simulation import TestSimulation
 
 
-def test_fmi_basic(function_tmpdir, targets):
+@pytest.mark.parametrize("csv", [True, False])
+def test_fmi_basic(function_tmpdir, targets, csv):
     """
     tests ability to run GWF model first, then PRT model
     in separate simulations via the flow model interface
@@ -66,8 +68,12 @@ def test_fmi_basic(function_tmpdir, targets):
             # particle id, k, i, j, localx, localy, localz
             (0, 0, 0, 0, 0.5, 0.5, 0.5)
         ]
+        prt_track_file = f"{name}.trk"
+        prt_track_csv_file = f"{name}.csv"
         prp = flopy.mf6.ModflowPrtprp(
             prt, pname="prp1", filename=f"{name}_1.prp",
+            track_filerecord=[prt_track_file],
+            trackcsv_filerecord=[prt_track_csv_file],
             nreleasepts=len(releasepts), packagedata=releasepts,
             perioddata={0: ["FIRST"]},
         )
@@ -92,7 +98,33 @@ def test_fmi_basic(function_tmpdir, targets):
         sim.register_solution_package(ems, [prt.name])
         sim.write_simulation()
         sim.run_simulation()
+
+        # make sure output files exist
         assert (ws / prt_budget_file).is_file()
+        assert (ws / prt_track_file).is_file()
+        assert (ws / prt_track_csv_file).is_file()
+
+        def check_track_data(data: np.recarray):
+            assert np.array_equal(
+                data.dtype.names,
+                ['kper','kstp','prpid','partid','cellid','status','reason','t','x','y','z'])
+            assert np.array_equal(
+                [v[0] for v in data.dtype.fields.values()],
+                ['<i4','<i4','<i4','<i4','<i4','<i4','<i4','<f8','<f8','<f8','<f8'])
+
+        # check particle tracks written to binary output file (and header file)
+        hdr_lns = open(ws / f"{prt_track_file}.hdr").readlines()
+        hdr_lns_spl = [[ll.strip() for ll in l.split(',')] for l in hdr_lns]
+        dt = np.dtype(list(zip(hdr_lns_spl[0], hdr_lns_spl[1])))
+        data_bin = np.fromfile(ws / prt_track_file, dtype=dt)
+        check_track_data(data_bin)
+
+        # check particle tracks written to CSV output file
+        data_csv = np.genfromtxt(ws / prt_track_csv_file, dtype=dt, delimiter=',', skip_header=True)
+        check_track_data(data_csv)
+
+        # assert particle track data written to both output files are equal
+        assert np.array_equal(data_bin, data_csv)
 
     run_flow_model()
     run_tracking_model()

@@ -161,6 +161,7 @@ contains
 
   !> @brief Apply Pollock's method to a rectangular cell
   subroutine apply_mCP(this, particle, tmax)
+    use TdisModule, only: kper, kstp
     use UtilMiscModule
     ! -- dummy
     class(MethodCellPollockType), intent(inout) :: this
@@ -201,14 +202,23 @@ contains
       if (particle%z > this%cellRect%cellDefn%top) then
         particle%z = this%cellRect%cellDefn%top
         ! -- Store track data
-        ntrack = this%trackdata%ntrack + 1 ! kluge?
-        this%trackdata%ntrack = ntrack
-        this%trackdata%iptrack(ntrack) = particle%ipart
-        this%trackdata%ictrack(ntrack) = particle%iTrackingDomain(2)
-        this%trackdata%xtrack(ntrack) = particle%x
-        this%trackdata%ytrack(ntrack) = particle%y
-        this%trackdata%ztrack(ntrack) = particle%z
-        this%trackdata%ttrack(ntrack) = particle%ttrack
+        ntrack = this%trackdata%nrows + 1 ! kluge?
+        this%trackdata%nrows = ntrack
+        this%trackdata%kper(ntrack) = kper
+        this%trackdata%kstp(ntrack) = kstp
+        this%trackdata%iprpid(ntrack) = particle%iprp
+        this%trackdata%ipartid(ntrack) = particle%ipart
+        this%trackdata%icellid(ntrack) = particle%iTrackingDomain(2)
+        this%trackdata%istatus(ntrack) = particle%istatus
+        if (particle%istatus > 1) then
+          this%trackdata%ireason(ntrack) = 3 ! termination
+        else
+          this%trackdata%ireason(ntrack) = 1 ! crossing cell boundary
+        end if
+        this%trackdata%x(ntrack) = particle%x
+        this%trackdata%y(ntrack) = particle%y
+        this%trackdata%z(ntrack) = particle%z
+        this%trackdata%t(ntrack) = particle%ttrack
       end if
       !
       ! -- Transform particle location into local cell coordinates
@@ -234,14 +244,23 @@ contains
     end if
     !
     ! -- Store track data
-    ntrack = this%trackdata%ntrack + 1 ! kluge?
-    this%trackdata%ntrack = ntrack
-    this%trackdata%iptrack(ntrack) = particle%ipart
-    this%trackdata%ictrack(ntrack) = particle%iTrackingDomain(2)
-    this%trackdata%xtrack(ntrack) = particle%x
-    this%trackdata%ytrack(ntrack) = particle%y
-    this%trackdata%ztrack(ntrack) = particle%z
-    this%trackdata%ttrack(ntrack) = particle%ttrack
+    ntrack = this%trackdata%nrows + 1 ! kluge?
+    this%trackdata%nrows = ntrack
+    this%trackdata%kper(ntrack) = kper
+    this%trackdata%kstp(ntrack) = kstp
+    this%trackdata%iprpid(ntrack) = particle%iprp
+    this%trackdata%ipartid(ntrack) = particle%ipart
+    this%trackdata%icellid(ntrack) = particle%iTrackingDomain(2)
+    this%trackdata%istatus(ntrack) = particle%istatus
+    if (particle%istatus > 1) then
+      this%trackdata%ireason(ntrack) = 3 ! termination
+    else
+      this%trackdata%ireason(ntrack) = 1 ! crossing cell boundary
+    end if
+    this%trackdata%x(ntrack) = particle%x
+    this%trackdata%y(ntrack) = particle%y
+    this%trackdata%z(ntrack) = particle%z
+    this%trackdata%t(ntrack) = particle%ttrack
     !
     return
     !
