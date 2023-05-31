@@ -1404,27 +1404,23 @@ contains
           ! -- If particle inactive, record (unchanged) location in track data
           ! -- and skip tracking
           if (packobj%partlist%istatus(np) .ne. 1) then
-! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
-!            ntrack = this%trackdata%ntrack + 1
-!            this%trackdata%ntrack = ntrack
-!            this%trackdata%iptrack(ntrack) = np
-!          this%trackdata%ictrack(ntrack) = packobj%partlist%iTrackingDomain(np, 2)
-!            this%trackdata%xtrack(ntrack) = packobj%partlist%x(np)
-!            this%trackdata%ytrack(ntrack) = packobj%partlist%y(np)
-!            this%trackdata%ztrack(ntrack) = packobj%partlist%z(np)
-!            this%trackdata%ttrack(ntrack) = packobj%partlist%ttrack(np)
+            ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
+            ! ntrack = this%trackdata%ntrack + 1
+            ! this%trackdata%ntrack = ntrack
+            ! this%trackdata%iptrack(ntrack) = np
+            ! this%trackdata%ictrack(ntrack) = packobj%partlist%iTrackingDomain(np, 2)
+            ! this%trackdata%xtrack(ntrack) = packobj%partlist%x(np)
+            ! this%trackdata%ytrack(ntrack) = packobj%partlist%y(np)
+            ! this%trackdata%ztrack(ntrack) = packobj%partlist%z(np)
+            ! this%trackdata%ttrack(ntrack) = packobj%partlist%ttrack(np)
             cycle
           end if
           !
-          ! particle => this%partlist(np)%particle
           particle%ipart = np ! kluge note: make subroutine to load particle from list???
           ! particle%velmult = this%partlist%velmult(np)
           particle%x = packobj%partlist%x(np)
           particle%y = packobj%partlist%y(np)
           particle%z = packobj%partlist%z(np)
-          ! particle%xlocal = this%partlist%xlocal(np)
-          ! particle%ylocal = this%partlist%ylocal(np)
-          ! particle%zlocal = this%partlist%zlocal(np)
           particle%iTrackingDomain(levelMin:levelMax) = &
             packobj%partlist%iTrackingDomain(np, levelMin:levelMax)
           particle%iTrackingDomain(1) = this%id ! kluge note: set this elsewhere???

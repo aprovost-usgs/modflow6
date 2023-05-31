@@ -195,37 +195,68 @@ def test_fmi_basic(function_tmpdir, targets):
     assert (ws / f"{name}.cbb").is_file()
 
 
+invalid_cases = {
+    "frac_array": {0: ["FRACTION", 0.5, 0.2]},
+    "frac_frac_array": {0: ["FRACTION", 0.5, 0.2], 1: ["FRACTION", 0.5, 0.1]},
+}
+@pytest.mark.parametrize("release_timing", invalid_cases.values(), ids=invalid_cases.keys())
+def test_invalid_releasesetting(function_tmpdir, targets, release_timing):
+    """
+    Tests invalid fractional timestep release settings. All cases should fail.
+    """
+
+    name = "prtrel"
+    mf6 = targets.mf6
+    ws = function_tmpdir
+
+    sim = get_basic_combined_sim(name, ws, mf6, release_timing)
+    sim.write_simulation()
+    success, buff = sim.run_simulation(report=True)
+    assert not success
+    assert any("FRACTION must be a single value if no other release setting is provided" in l for l in buff)
+
+
 # dict insertion order is preserved since py3.6 so
 # cases can be unzipped with .keys() and .values() 
-cases = {
+valid_cases = {
     "none": None,
     "first": {0: ["FIRST"]},
     "first_first": {0: ["FIRST"], 1: ["FIRST"]},
-    # "frac": {0: ["FRACTION", 0.5]},
-    # "frac_frac": {0: ["FRACTION", 0.5], 1: ["FRACTION", 0.5]},
-    # "first_frac": {0: ["FIRST", "FRACTION", 0.5]},  # todo debug flopy, hangs and doesn't write prp file
+    # "first_frac": {0: [("FIRST"), ("FRACTION", 0.5)]},  # todo debug flopy hanging
     "all": {0: ["ALL"]},
     "all_all": {0: ["ALL"], 1: ["ALL"]},
-    # "all_frac": {0: ["ALL", ("FRACTION", 0.5)]},  # todo debug flopy, hangs and doesn't write prp file
-    "freq": {0: ["FREQUENCY", 2], 1: ["FREQUENCY", 5]},
-    # "freq_frac": {0: [("FREQUENCY", 2), ("FRACTION", 0.5)]},  # todo debug flopy, KeyError 'fractionrecord'
-    "steps": {0: ["STEPS", 1, 2, 3], 1: ["STEPS", 4, 5, 6]},
-    # "steps_frac": {0: [("STEPS", 1, 2, 3), ("FRACTION", 0.5)]},  # todo debug flopy, KeyError 'fractionrecord'
+    # "all_frac": {0: [("ALL"), ("FRACTION", 0.5)]},  # todo debug flopy hanging
+    "freq": {0: ["FREQUENCY", 2]},
+    "freq_freq": {0: ["FREQUENCY", 2], 1: ["FREQUENCY", 5]},
+    "freq_frac": {0: [("FREQUENCY", 2), ("FRACTION", 0.5)]},
+    "steps": {0: ["STEPS", 1, 2, 3]},
+    "steps_steps": {0: ["STEPS", 1, 2, 3], 1: ["STEPS", 4, 5, 6, 7]},
+    "steps_frac": {0: [("STEPS", 1, 2, 3), ("FRACTION", 0.5, 0.4, 0.2)]},
+    "frac": {0: ["FRACTION", 0.5]},
+    "frac_frac": {0: ["FRACTION", 0.5], 1: ["FRACTION", 0.5]},
 }
 # define total particle mass (# of particles currently
 # since mass is hardcoded 1 for now) expected for each
 # release timing test case
-cmass = {
-    "none": 1.,
-    "first": 2.,
-    "first_first": 2.,
+valid_cmass = {
+    "none": 1.,  # if no period data provided,  default is FIRST in first stress period
+    "first": 2.,  # if only first stress period is provided, settings apply to all sp's
+    "first_first": 2.,  # should be totally equivalent to 'first'
+    # "first_frac": 2.,  # mass should be equal to 'first' even though timing is different
     "all": 20.,
-    "all_all": 20.,
-    "freq": 7.,
-    "steps": 6.
+    "all_all": 20.,  # should be equivalent to 'all' since 1st sp settings apply to all sp's
+    # "all_frac": 20.,  # mass should be equal to 'all' and 'all_all'
+    "freq": 10.,
+    "freq_freq": 7.,  # 1st sp uses freq 2, 2nd sp uses freq 5, so (10/2) + (10/5) = 7
+    "freq_frac": 10.,
+    "steps": 6.,
+    "steps_steps": 7.,  # different steps specified in 1st and 2nd sp's (1 more in 2nd)
+    "steps_frac": 6.,  # 3 time steps selected in both sp's, mass equal to 'steps'
+    "frac": 2.,  # mass should be equal to 'first' and 'first_first'
+    "frac_frac": 2.,  # mass should be equal to 'first' and 'first_first'
 }
-@pytest.mark.parametrize("release_timing", cases.values(), ids=cases.keys())
-def test_releasesetting(request, function_tmpdir, targets, release_timing):
+@pytest.mark.parametrize("release_timing", valid_cases.values(), ids=valid_cases.keys())
+def test_valid_releasesetting(request, function_tmpdir, targets, release_timing):
     """
     Tests fractional timestep release configuration, where particles 
     are released some fraction of the way through selected timesteps
@@ -239,13 +270,16 @@ def test_releasesetting(request, function_tmpdir, targets, release_timing):
     sim.write_simulation()
     success, buff = sim.run_simulation(report=True)
     assert success
-    assert (ws / f"{name}.bud").is_file()
-    assert (ws / f"{name}.hds").is_file()
-    assert (ws / f"{name}.cbb").is_file()
+    assert (ws / f"{name}_prt.lst").is_file()
+    assert (ws / f"{name}.bud").is_file()  # GWF budget binary output
+    assert (ws / f"{name}.hds").is_file()  # GWF head binary output
+    assert (ws / f"{name}.cbb").is_file()  # PRT budget binary output
+    # assert (ws / f"{name}.prk").is_file()  # particle track binary output
+    # assert (ws / f"{name}.prh").is_file()  # particle track ascii headers/dtypes for .prk binary output
 
     # get expected particle mass for this case
     case_name = request.node.name.rpartition("[")[2].rpartition("]")[0]
-    expected_mass = cmass.get(case_name, None)
+    expected_mass = valid_cmass.get(case_name, None)
     if expected_mass is None:
         print(f"No expected mass for case {case_name}, skipping check")
         return
@@ -256,14 +290,6 @@ def test_releasesetting(request, function_tmpdir, targets, release_timing):
     assert line
     mass = float(line.split("TOTAL OUT")[1].replace("=", "").strip())
     assert mass == expected_mass
-
-    # check release timing by logs in list file
-    # lines = (ws / f"{name}_1.prp").open().readlines()
-    # assert any(l for l in lines if "PARTICLE RELEASE SCHEDULED AT TIME STEP FRACTION" in l)
-
-    # check release timing by pathline output
-    # lines = (ws / f"{name}.pathline").open().readlines()
-    # assert any(l for l in lines if "0.500000" in l)
 
 
 @parametrize_with_cases("case", cases=PrtCases)

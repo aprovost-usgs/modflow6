@@ -679,12 +679,13 @@ contains
             call expandarray(this%frac_list_rls)
             this%frac_list_rls(n + 1) = rval
           end do fraclistsearch
+          this%rls_any = .true.
         case ('FIRST')
           this%rls_first = .true.
           this%rls_any = .true.
         case default
           write (errmsg, '(2a)') &
-            'Looking for ALL, STEPS, FIRST, or FREQUENCY. Found: ', &
+            'Looking for ALL, STEPS, FIRST, FREQUENCY, or FRACTION. Found: ', &
             trim(adjustl(keyword))
           call store_error(errmsg, terminate=.TRUE.)
         end select
@@ -695,6 +696,29 @@ contains
     else
       rls_lsp = .true.
     end if
+    !
+    ! -- if FRACTION is provided without any other setting, it must be
+    !    a single value, and the release settings default is the first
+    !    time step of the stress period, same as default if no settings
+    !    are provided. FRACTION may not be an array if it is the only
+    !    setting provided.
+    !
+    ! -- todo: should we interpret an array-valued FRACTION of length N
+    !    applying to first N steps of period? or terminate with error?
+    if (this%rls_any .and. .not. (this%rls_first .or. &
+                                  this%rls_all .or. &
+                                  this%ifreq_rls > 0 .or. &
+                                  size(this%kstp_list_rls) > 0)) then
+      if (size(this%frac_list_rls) > 1) then
+        write (errmsg, '(2a)') &
+          'FRACTION must be a single value if no other release setting'// &
+          ' is provided.'
+        call store_error(errmsg, terminate=.TRUE.)
+      else
+        this%rls_first = .true.
+      end if
+    end if
+    !
     ! -- if using STEPS, FRACTION must have 1 element
     !    or the same number as STEPS
     if (size(this%kstp_list_rls) > 0 .and. .not. ( &
