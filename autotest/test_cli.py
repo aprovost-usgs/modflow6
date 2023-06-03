@@ -10,14 +10,15 @@ def test_cli_version():
         subprocess.check_output([str(bin_path / "mf6"), "-v"]).decode().split()
     )
     assert output.startswith("mf6:")
-    assert output.lower().count("release") == 1
-    # assert output.lower().count("candidate") <= 1
-
-    print(output)
 
     version = (
-        output.lower().rpartition(":")[2].rpartition("release")[0].strip()
+        output.lower().rpartition(":")[2].rpartition(" ")[0].strip()
     )
     v_split = version.split(".")
     assert len(v_split) == 3
-    assert all(s.isdigit() for s in v_split)
+    assert all(s.isdigit() for s in v_split[:2])
+    if "-" in v_split[2]:
+        spl = v_split[2].split("-")
+        assert spl[0].isdigit()
+    else:
+        assert v_split[2].replace("release", "").replace("candidate", "").strip().isdigit()
