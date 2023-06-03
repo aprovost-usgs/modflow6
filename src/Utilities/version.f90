@@ -16,7 +16,7 @@ module VersionModule
   ! -- modflow 6 version
   integer(I4B), parameter :: IDEVELOPMODE = 1
   character(len=*), parameter :: VERSIONNUMBER = '6.5.0'
-  character(len=*), parameter :: VERSIONTAG = ' Release Candidate 12/09/2022'
+  character(len=*), parameter :: VERSIONTAG = '-prt 06/03/2023'
   character(len=40), parameter :: VERSION = VERSIONNUMBER//VERSIONTAG
   character(len=10), parameter :: MFVNAM = ' 6'
   character(len=*), parameter :: MFTITLE = &
