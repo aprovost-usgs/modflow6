@@ -850,8 +850,8 @@ contains
         call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%itrkhdr, '(a,/,a)') &
-          'kper,kstp,prpid,partid,cellid,status,reason,t,x,y,z', &
-          '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<f8,<f8,<f8,<f8'
+          'kper,kstp,iprp,ip,icell,istatus,ireason,trelease,t,x,y,z', &
+          '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<f8,<f8,<f8,<f8,<f8'
       else
         call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -1171,7 +1171,7 @@ contains
   !> @brief Write track data to a binary or CSV output file
   subroutine prp_track_write(this, itrkun, csv)
     ! -- modules
-    use InputOutputModule, only: save_particle_track_datum
+    use ParticleModule, only: ParticleListType
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     integer(I4B) :: itrkun
@@ -1179,28 +1179,32 @@ contains
     ! -- local
     integer(I4B) :: itrack
     integer(I4B) :: kper, kstp
-    integer(I4B) :: ipartid, iprpid, icellid, istatus, ireason ! todo izoneno
-    real(DP) :: t, x, y, z
+    integer(I4B) :: ip, iprp, icell, istatus, ireason ! todo izoneno
+    real(DP) :: trelease, t, x, y, z
     !
     ! -- loop over particle track data
     do itrack = this%itrack1 + 1, this%itrack2
       kper = this%trackdata%kper(itrack)
       kstp = this%trackdata%kstp(itrack)
-      iprpid = this%trackdata%iprpid(itrack)
-      ipartid = this%trackdata%ipartid(itrack)
-      icellid = this%trackdata%icellid(itrack)
+      ip = this%trackdata%ipartid(itrack)
+      iprp = this%trackdata%iprpid(itrack) ! todo: extract from particle list, don't store in trackdata
+      icell = this%trackdata%icellid(itrack)
       istatus = this%trackdata%istatus(itrack)
       ireason = this%trackdata%ireason(itrack)
+      trelease = this%partlist%trelease(ip)
       t = this%trackdata%t(itrack)
       x = this%trackdata%x(itrack)
       y = this%trackdata%y(itrack)
       z = this%trackdata%z(itrack)
 
       ! write row to file
-      call save_particle_track_datum(itrkun, csv, &
-                                     kper, kstp, &
-                                     iprpid, ipartid, icellid, istatus, ireason, &
-                                     t, x, y, z)
+      if (csv) then
+        write (itrkun, '(*(G0,:,","))') &
+          kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z
+      else
+        write (itrkun) &
+          kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z
+      end if
     end do
   end subroutine prp_track_write
 
@@ -1212,8 +1216,8 @@ contains
     integer(I4B), intent(in) :: icbcun
     ! -- local
     character(len=16) :: text
-    character(len=16), dimension(5) :: auxtxt
-    real(DP), dimension(5) :: aux
+    character(len=16), dimension(12) :: auxtxt
+    real(DP), dimension(12) :: aux
     integer(I4B) :: nlist
     integer(I4B) :: ip
     integer(I4B) :: naux
@@ -1225,9 +1229,11 @@ contains
       !
       ! -- Write the header
       text = '      DATA-PRTCL'
-      naux = 5
-      auxtxt(:) = ['               x', '               y', '               z', &
-                   '        trelease', '          ttrack']
+      naux = 12
+      auxtxt(:) = ['            kper', '            kstp', '          iprpid', &
+                   '         ipartid', '          cellid', '         istatus', &
+                   '         ireason', '        trelease', '               t', &
+                   '               x', '               y', '               z']
       nlist = this%itrack2 - this%itrack1
       call this%dis%record_srcdst_list_header(text, &
                                               this%name_model, &
@@ -1240,16 +1246,22 @@ contains
                                               nlist, &
                                               this%iout)
       !
-      ! -- Write a zero for Q, and then write particle x, y, z as aux variables
+      ! -- Write a zero for Q and particle data as aux variables
       do itrack = this%itrack1 + 1, this%itrack2
         ip = this%trackdata%ipartid(itrack)
         icell = this%trackdata%icellid(itrack)
-        irpt = this%partlist%irpt(ip)
-        aux(1) = this%trackdata%x(itrack)
-        aux(2) = this%trackdata%y(itrack)
-        aux(3) = this%trackdata%z(itrack)
-        aux(4) = this%partlist%trelease(ip)
-        aux(5) = this%trackdata%t(itrack)
+        aux(1) = this%trackdata%kper(itrack)
+        aux(2) = this%trackdata%kstp(itrack)
+        aux(3) = this%trackdata%iprpid(itrack) ! todo: as above
+        aux(4) = ip
+        aux(5) = icell
+        aux(6) = this%trackdata%istatus(itrack)
+        aux(7) = this%trackdata%ireason(itrack)
+        aux(8) = this%partlist%trelease(ip)
+        aux(9) = this%trackdata%t(itrack)
+        aux(10) = this%trackdata%x(itrack)
+        aux(11) = this%trackdata%y(itrack)
+        aux(12) = this%trackdata%z(itrack)
         call this%dis%record_mf6_list_entry(icbcun, irpt, icell, DZERO, &
                                             naux, aux)
       end do

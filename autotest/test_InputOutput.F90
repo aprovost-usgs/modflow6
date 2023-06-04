@@ -1,7 +1,7 @@
 module test_InputOutput
     use testdrive, only : error_type, unittest_type, new_unittest, check
     use ConstantsModule, only : LINELENGTH
-    use InputOutputModule, only : get_node, get_ijk, get_jk
+    use InputOutputModule, only : get_node, get_ijk
     implicit none
     private
     public :: collect_InputOutput
@@ -11,8 +11,7 @@ module test_InputOutput
     subroutine collect_InputOutput(testsuite)
       type(unittest_type), allocatable, intent(out) :: testsuite(:)
       testsuite = [ &
-        new_unittest("get_node_get_ijk", test_get_node_get_ijk), &
-        new_unittest("tabsav", test_tabsav) &
+        new_unittest("get_node_get_ijk", test_get_node_get_ijk) &
       ]
     end subroutine collect_InputOutput
 
@@ -28,7 +27,7 @@ module test_InputOutput
       integer :: ncls
       integer :: k, i, j
 
-      ! trivial case, grid has 1 cell
+      ! trivial grid with 1 cell
       nnum = get_node(1, 1, 1, 1, 1, 1)
       call get_ijk(nnum, 1, 1, 1, ilay, irow, icol)
       call check(error, nnum == 1)
@@ -60,11 +59,5 @@ module test_InputOutput
         end do
       end do
     end subroutine test_get_node_get_ijk
-
-    subroutine test_tabsav(error)
-      type(error_type), allocatable, intent(out) :: error
-      ! todo
-      call check(error, 1 + 1 == 2)
-    end subroutine test_tabsav
 
 end module test_InputOutput

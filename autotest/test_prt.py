@@ -1,4 +1,5 @@
 from math import sqrt
+import os
 from pathlib import Path
 import flopy
 from matplotlib import pyplot as plt
@@ -15,11 +16,39 @@ from shapely.geometry import MultiPoint, LineString
 from simulation import TestSimulation
 
 
-@pytest.mark.parametrize("csv", [True, False])
-def test_fmi_basic(function_tmpdir, targets, csv):
+dtype = {
+    "names": ["kper", "kstp", "iprp", "ip", "icell", "istatus", "ireason", "trelease", "t", "x", "y", "z"],
+    "formats": ["<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<f8", "<f8", "<f8", "<f8", "<f8"],
+}
+
+
+def load_track_data(cbb, grid):
     """
-    tests ability to run GWF model first, then PRT model
-    in separate simulations via the flow model interface
+    Temporary method to read particle track data from a cell budget file,
+    until the dedicated output file method is completed in mf6 and FloPy.
+    """
+
+    upn = cbb.get_unique_package_names(decode=True)
+    times = cbb.get_times()
+    tracks = []
+    for prpnam in upn:
+        for totim in times:
+            data = cbb.get_data(text='DATA-PRTCL', paknam=prpnam, totim=totim)
+            for ploc in data[0]:
+                kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z, = [ploc[i] for i in range(3, 15)]
+                pathpoint = (kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z)
+                tracks.append(pathpoint)
+        break
+
+    return np.core.records.fromrecords(tracks, dtype=dtype)
+
+
+def test_fmi_basic(function_tmpdir, targets):
+    """
+    Tests ability to run a GWF model then a PRT model
+    in separate simulations via flow model interface.
+    Also tests for correct output files, and compares
+    data written to output files of different formats.
     """
 
     name = "prtfmi0"
@@ -53,7 +82,10 @@ def test_fmi_basic(function_tmpdir, targets, csv):
             saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         )
         sim.write_simulation()
-        sim.run_simulation()
+        success, _ = sim.run_simulation()
+        assert success
+
+        # check output files
         assert (ws / budget_file).is_file()
         assert (ws / head_file).is_file()
 
@@ -69,7 +101,7 @@ def test_fmi_basic(function_tmpdir, targets, csv):
             (0, 0, 0, 0, 0.5, 0.5, 0.5)
         ]
         prt_track_file = f"{name}.trk"
-        prt_track_csv_file = f"{name}.csv"
+        prt_track_csv_file = f"{name}.trk.csv"
         prp = flopy.mf6.ModflowPrtprp(
             prt, pname="prp1", filename=f"{name}_1.prp",
             track_filerecord=[prt_track_file],
@@ -97,25 +129,28 @@ def test_fmi_basic(function_tmpdir, targets, csv):
         )
         sim.register_solution_package(ems, [prt.name])
         sim.write_simulation()
-        sim.run_simulation()
+        success, _ = sim.run_simulation()
+        assert success
 
         # make sure output files exist
         assert (ws / prt_budget_file).is_file()
         assert (ws / prt_track_file).is_file()
         assert (ws / prt_track_csv_file).is_file()
 
-        def check_track_data(data: np.recarray):
-            assert np.array_equal(
-                data.dtype.names,
-                ['kper','kstp','prpid','partid','cellid','status','reason','t','x','y','z'])
-            assert np.array_equal(
-                [v[0] for v in data.dtype.fields.values()],
-                ['<i4','<i4','<i4','<i4','<i4','<i4','<i4','<f8','<f8','<f8','<f8'])
+        def get_dtype(path: os.PathLike):
+            hdr_lns = open(path).readlines()
+            hdr_lns_spl = [[ll.strip() for ll in l.split(',')] for l in hdr_lns]
+            return np.dtype(list(zip(hdr_lns_spl[0], hdr_lns_spl[1])))
 
-        # check particle tracks written to binary output file (and header file)
-        hdr_lns = open(ws / f"{prt_track_file}.hdr").readlines()
-        hdr_lns_spl = [[ll.strip() for ll in l.split(',')] for l in hdr_lns]
-        dt = np.dtype(list(zip(hdr_lns_spl[0], hdr_lns_spl[1])))
+        def check_track_data(data: np.recarray):
+            assert np.array_equal(data.dtype.names, dtype["names"])
+            assert np.array_equal([v[0] for v in data.dtype.fields.values()], dtype["formats"])
+            assert data.dtype == dtype
+
+        # get dtype from ascii header file
+        dt = get_dtype(ws / f"{prt_track_file}.hdr")
+
+        # check particle tracks written to binary output file 
         data_bin = np.fromfile(ws / prt_track_file, dtype=dt)
         check_track_data(data_bin)
 
@@ -123,8 +158,13 @@ def test_fmi_basic(function_tmpdir, targets, csv):
         data_csv = np.genfromtxt(ws / prt_track_csv_file, dtype=dt, delimiter=',', skip_header=True)
         check_track_data(data_csv)
 
-        # assert particle track data written to both output files are equal
-        assert np.array_equal(data_bin, data_csv)
+        # todo check particle tracks written to budget file (old way)
+        data_bud = load_track_data(flopy.utils.CellBudgetFile(ws / prt_budget_file), prt.modelgrid)
+
+        # check particle tracks written to both output files are equal
+        for k in data_bin.dtype.names:
+            assert np.allclose(data_bin[k], data_csv[k], equal_nan=True)
+            assert np.allclose(data_bin[k], data_bud[k], equal_nan=True)
 
     run_flow_model()
     run_tracking_model()
