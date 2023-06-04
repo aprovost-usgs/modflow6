@@ -1,3 +1,4 @@
+import re
 import subprocess
 
 from conftest import project_root_path
@@ -5,11 +6,12 @@ from conftest import project_root_path
 bin_path = project_root_path / "bin"
 
 
-def test_cli_version():
+def test_cli_version(targets):
     output = " ".join(
-        subprocess.check_output([str(bin_path / "mf6"), "-v"]).decode().split()
+        subprocess.check_output([targets.mf6, "-v"]).decode().split()
     )
-    assert output.startswith("mf6:")
+    print(output)
+    assert output.startswith("mf6")
 
     version = (
         output.lower().rpartition(":")[2].rpartition(" ")[0].strip()
@@ -21,4 +23,4 @@ def test_cli_version():
         spl = v_split[2].split("-")
         assert spl[0].isdigit()
     else:
-        assert v_split[2].replace("release", "").replace("candidate", "").strip().isdigit()
+        assert re.sub("[^0-9]", "", v_split[2]).strip().isdigit()

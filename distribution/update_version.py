@@ -69,7 +69,7 @@ class Version(NamedTuple):
 
     def __repr__(self):
         s = f"{self.major}.{self.minor}.{self.patch}"
-        if self.label is not None:
+        if self.label is not None and self.label != "":
             s += f"-{self.label}"
         return s
 
@@ -189,8 +189,10 @@ def update_version_txt_and_py(
         f.write(f"major = {version.major}\n")
         f.write(f"minor = {version.minor}\n")
         f.write(f"micro = {version.patch}\n")
-        f.write(f"label = '{version.label}'\n")
-        f.write("__version__ = '{:d}.{:d}.{:d}{}'.format(major, minor, micro, label)\n")
+        f.write("label = " + (("'" + version.label + "'") if version.label else "''") + "\n")
+        f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
+        f.write("if label:\n")
+        f.write("\t__version__ += '{}-{}'.format(__version__, label)")
         f.close()
     log_update(version_file_path, version)
     py_path = project_root_path / "doc" / version_file_path.name.replace(".txt", ".py")
@@ -236,8 +238,13 @@ def update_version_f90(
     with open(path, "w") as f:
         skip = False
         version_spl = str(version).rpartition("-")
-        version_num = version_spl[0]
-        version_label = version_spl[2] if len(version_spl) > 1 else ""
+        if version_spl[1]:
+            version_num = version_spl[0]
+            version_label = version_spl[2]
+        else:
+            version_num = str(version_spl[2])
+            version_label = ""
+
         for line in lines:
             # skip all of the disclaimer text
             if skip:
@@ -253,7 +260,9 @@ def update_version_f90(
                 line = line.rpartition("::")[0] + f":: VERSIONNUMBER = '{version_num}'"
             elif ":: VERSIONTAG =" in line:
                 fmat_tstmp = timestamp.strftime("%m/%d/%Y")
-                line = line.rpartition("::")[0] + f":: VERSIONTAG = '-{version_label} {fmat_tstmp}'"
+                label_clause = f"-{version_label}" if version_label else ""
+                label_clause += " (preliminary)" if not approved else ""
+                line = line.rpartition("::")[0] + f":: VERSIONTAG = '{label_clause} {fmat_tstmp}'"
             elif ":: FMTDISCLAIMER =" in line:
                 line = get_disclaimer(approved, formatted=True)
                 skip = True
