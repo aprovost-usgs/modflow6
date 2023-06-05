@@ -1249,6 +1249,7 @@ contains
       ! -- Write a zero for Q and particle data as aux variables
       do itrack = this%itrack1 + 1, this%itrack2
         ip = this%trackdata%ip(itrack)
+        irpt = this%partlist%irpt(ip)
         icell = this%trackdata%icell(itrack)
         aux(1) = this%trackdata%kper(itrack)
         aux(2) = this%trackdata%kstp(itrack)
