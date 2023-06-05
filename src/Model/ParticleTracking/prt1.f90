@@ -350,7 +350,7 @@ contains
     ! if (this%inobs > 0) call this%obs%prt_obs_ar(this%pin, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
-    !call this%dis%dis_ar(this%npf%icelltype)
+    !call this%dis%dis_ar(this%npf%icellidtype)
     !
     ! -- set up output control
     call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
@@ -1135,9 +1135,9 @@ contains
     call mem_deallocate(this%itrack)
     call mem_deallocate(this%trackdata%kper)
     call mem_deallocate(this%trackdata%kstp)
-    call mem_deallocate(this%trackdata%iprpid)
-    call mem_deallocate(this%trackdata%ipartid)
-    call mem_deallocate(this%trackdata%icellid)
+    call mem_deallocate(this%trackdata%iprp)
+    call mem_deallocate(this%trackdata%ip)
+    call mem_deallocate(this%trackdata%icell)
     call mem_deallocate(this%trackdata%istatus)
     call mem_deallocate(this%trackdata%ireason)
     ! call mem_deallocate(this%trackdata%izoneno)
@@ -1236,11 +1236,11 @@ contains
                       'ITRACKKPER', this%memorypath)
     call mem_allocate(this%trackdata%kstp, ntrackmx, &
                       'ITRACKKSTP', this%memorypath) ! kluge note: ok that it's in %trackdata ?
-    call mem_allocate(this%trackdata%iprpid, ntrackmx, &
+    call mem_allocate(this%trackdata%iprp, ntrackmx, &
                       'ITRACKPRPID', this%memorypath)
-    call mem_allocate(this%trackdata%ipartid, ntrackmx, &
+    call mem_allocate(this%trackdata%ip, ntrackmx, &
                       'ITRACKPARTID', this%memorypath) ! kluge note: ok that it's in %trackdata ?
-    call mem_allocate(this%trackdata%icellid, ntrackmx, &
+    call mem_allocate(this%trackdata%icell, ntrackmx, &
                       'ITRACKCELLID', this%memorypath)
     call mem_allocate(this%trackdata%istatus, ntrackmx, &
                       'ITRACKSTATUS', this%memorypath)
@@ -1451,11 +1451,11 @@ contains
             ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
             ! ntrack = this%trackdata%nrows + 1
             ! this%trackdata%nrows = ntrack
-            ! this%trackdata%iprpid(ntrack) = iprp
-            ! this%trackdata%ipartid(ntrack) = np
+            ! this%trackdata%iprp(ntrack) = iprp
+            ! this%trackdata%ip(ntrack) = np
             ! this%trackdata%ireason(ntrack) = ??
             ! this%trackdata%izoneno(ntrack) = ??
-            ! this%trackdata%icellid(ntrack) = packobj%partlist%iTrackingDomain(np, 2)
+            ! this%trackdata%icell(ntrack) = packobj%partlist%iTrackingDomain(np, 2)
             ! this%trackdata%x(ntrack) = packobj%partlist%x(np)
             ! this%trackdata%y(ntrack) = packobj%partlist%y(np)
             ! this%trackdata%z(ntrack) = packobj%partlist%z(np)
@@ -1512,9 +1512,9 @@ contains
             this%trackdata%nrows = ntrack
             this%trackdata%kper(ntrack) = kper
             this%trackdata%kstp(ntrack) = kstp
-            this%trackdata%iprpid(ntrack) = iprp
-            this%trackdata%ipartid(ntrack) = particle%ipart
-            this%trackdata%icellid(ntrack) = particle%iTrackingDomain(2)
+            this%trackdata%iprp(ntrack) = iprp
+            this%trackdata%ip(ntrack) = particle%ipart
+            this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
             this%trackdata%istatus(ntrack) = particle%istatus
             this%trackdata%ireason(ntrack) = 0 ! release
             this%trackdata%x(ntrack) = particle%x

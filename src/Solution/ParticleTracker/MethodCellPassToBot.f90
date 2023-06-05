@@ -144,9 +144,9 @@ contains
     this%trackdata%nrows = ntrack
     this%trackdata%kper(ntrack) = kper
     this%trackdata%kstp(ntrack) = kstp
-    this%trackdata%iprpid(ntrack) = particle%iprp
-    this%trackdata%ipartid(ntrack) = particle%ipart
-    this%trackdata%icellid(ntrack) = particle%iTrackingDomain(2)
+    this%trackdata%iprp(ntrack) = particle%iprp
+    this%trackdata%ip(ntrack) = particle%ipart
+    this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
     this%trackdata%istatus(ntrack) = particle%istatus
     if (particle%istatus > 1) then
       this%trackdata%ireason(ntrack) = 3 ! termination

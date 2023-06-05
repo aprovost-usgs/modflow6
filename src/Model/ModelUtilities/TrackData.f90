@@ -16,12 +16,12 @@ module TrackDataModule
   !   - todo: particle release time
   type :: TrackDataType
     ! integer arrays
-    integer(I4B), pointer :: nrows => null() ! track data counter
+    integer(I4B), pointer :: nrows => null() ! total count of track data
     integer(I4B), dimension(:), pointer, contiguous :: kper ! stress period
     integer(I4B), dimension(:), pointer, contiguous :: kstp ! time step
-    integer(I4B), dimension(:), pointer, contiguous :: iprpid ! PRP ID
-    integer(I4B), dimension(:), pointer, contiguous :: ipartid ! particle ID
-    integer(I4B), dimension(:), pointer, contiguous :: icellid ! cell ID
+    integer(I4B), dimension(:), pointer, contiguous :: ip ! particle ID
+    integer(I4B), dimension(:), pointer, contiguous :: iprp ! PRP ID
+    integer(I4B), dimension(:), pointer, contiguous :: icell ! cell ID
     integer(I4B), dimension(:), pointer, contiguous :: istatus ! particle status
     integer(I4B), dimension(:), pointer, contiguous :: ireason ! reason for datum
     ! integer(I4B), dimension(:), pointer, contiguous :: izoneno ! todo zone number
@@ -35,7 +35,6 @@ module TrackDataModule
     real(DP), dimension(:), pointer, contiguous :: y ! current y coordinate
     real(DP), dimension(:), pointer, contiguous :: z ! current z coordinate
     real(DP), dimension(:), pointer, contiguous :: t ! current time
-    ! real(DP), dimension(:), pointer, contiguous :: trelease ! todo release time
 
   end type TrackDataType
 

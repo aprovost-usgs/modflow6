@@ -1186,9 +1186,9 @@ contains
     do itrack = this%itrack1 + 1, this%itrack2
       kper = this%trackdata%kper(itrack)
       kstp = this%trackdata%kstp(itrack)
-      ip = this%trackdata%ipartid(itrack)
-      iprp = this%trackdata%iprpid(itrack) ! todo: extract from particle list, don't store in trackdata
-      icell = this%trackdata%icellid(itrack)
+      ip = this%trackdata%ip(itrack)
+      iprp = this%trackdata%iprp(itrack) ! todo: extract from particle list, don't store in trackdata
+      icell = this%trackdata%icell(itrack)
       istatus = this%trackdata%istatus(itrack)
       ireason = this%trackdata%ireason(itrack)
       trelease = this%partlist%trelease(ip)
@@ -1248,11 +1248,11 @@ contains
       !
       ! -- Write a zero for Q and particle data as aux variables
       do itrack = this%itrack1 + 1, this%itrack2
-        ip = this%trackdata%ipartid(itrack)
-        icell = this%trackdata%icellid(itrack)
+        ip = this%trackdata%ip(itrack)
+        icell = this%trackdata%icell(itrack)
         aux(1) = this%trackdata%kper(itrack)
         aux(2) = this%trackdata%kstp(itrack)
-        aux(3) = this%trackdata%iprpid(itrack) ! todo: as above
+        aux(3) = this%trackdata%iprp(itrack) ! todo: as above
         aux(4) = ip
         aux(5) = icell
         aux(6) = this%trackdata%istatus(itrack)

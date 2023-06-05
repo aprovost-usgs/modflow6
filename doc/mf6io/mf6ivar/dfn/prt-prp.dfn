@@ -55,15 +55,6 @@ longname file keyword
 description name of the output file to write tracking information.
 
 block options
-name trackprintrecord
-type record track print_format formatrecord
-shape
-reader urword
-optional true
-longname
-description
-
-block options
 name trackcsv_filerecord
 type record trackcsv fileout trackcsvfile
 shape
@@ -95,15 +86,6 @@ tagged false
 optional false
 longname file keyword
 description name of the comma-separated value (CSV) file to write tracking information.
-
-block options
-name trackprintrecord
-type record track print_format formatrecord
-shape
-reader urword
-optional true
-longname
-description
 
 block options
 name stoptime
