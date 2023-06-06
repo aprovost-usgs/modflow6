@@ -17,8 +17,8 @@ from simulation import TestSimulation
 
 
 dtype = {
-    "names": ["kper", "kstp", "iprp", "irpt", "icell", "istatus", "ireason", "trelease", "t", "x", "y", "z"],
-    "formats": ["<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<f8", "<f8", "<f8", "<f8", "<f8"],
+    "names": ["kper", "kstp", "iprp", "irpt", "icell", "izone", "istatus", "ireason", "trelease", "t", "x", "y", "z"],
+    "formats": ["<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<f8", "<f8", "<f8", "<f8", "<f8"],
 }
 
 
@@ -35,8 +35,8 @@ def load_track_data(cbb, grid):
         for totim in times:
             data = cbb.get_data(text='DATA-PRTCL', paknam=prpnam, totim=totim)
             for ploc in data[0]:
-                kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z, = [ploc[i] for i in range(3, 15)]
-                pathpoint = (kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z)
+                kper, kstp, iprp, ip, icell, izone, istatus, ireason, trelease, t, x, y, z, = [ploc[i] for i in range(3, 16)]
+                pathpoint = (kper, kstp, iprp, ip, icell, izone, istatus, ireason, trelease, t, x, y, z)
                 tracks.append(pathpoint)
         break
 

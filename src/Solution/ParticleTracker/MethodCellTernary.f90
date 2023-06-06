@@ -231,6 +231,7 @@ contains
         this%trackdata%iprp(ntrack) = particle%iprp
         this%trackdata%irpt(ntrack) = particle%ipart
         this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
+        this%trackdata%izone(ntrack) = this%cellPoly%cellDefn%izone
         this%trackdata%istatus(ntrack) = particle%istatus
         if (particle%istatus > 1) then
           this%trackdata%ireason(ntrack) = 3 ! termination
@@ -328,6 +329,7 @@ contains
     this%trackdata%iprp(ntrack) = particle%iprp
     this%trackdata%irpt(ntrack) = particle%ipart
     this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
+    this%trackdata%izone(ntrack) = this%cellPoly%cellDefn%izone
     this%trackdata%istatus(ntrack) = particle%istatus
     if (particle%istatus > 1) then
       this%trackdata%ireason(ntrack) = 3 ! termination

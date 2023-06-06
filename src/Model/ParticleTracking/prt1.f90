@@ -1138,9 +1138,9 @@ contains
     call mem_deallocate(this%trackdata%iprp)
     call mem_deallocate(this%trackdata%irpt)
     call mem_deallocate(this%trackdata%icell)
+    call mem_deallocate(this%trackdata%izone)
     call mem_deallocate(this%trackdata%istatus)
     call mem_deallocate(this%trackdata%ireason)
-    ! call mem_deallocate(this%trackdata%izoneno)
     call mem_deallocate(this%trackdata%x)
     call mem_deallocate(this%trackdata%y)
     call mem_deallocate(this%trackdata%z)
@@ -1235,13 +1235,15 @@ contains
     call mem_allocate(this%trackdata%kper, ntrackmx, &
                       'TRACKKPER', this%memorypath)
     call mem_allocate(this%trackdata%kstp, ntrackmx, &
-                      'TRACKKSTP', this%memorypath) ! kluge note: ok that it's in %trackdata ?
+                      'TRACKKSTP', this%memorypath)
     call mem_allocate(this%trackdata%iprp, ntrackmx, &
                       'TRACKIPRP', this%memorypath)
     call mem_allocate(this%trackdata%irpt, ntrackmx, &
-                      'TRACKIRPT', this%memorypath) ! kluge note: ok that it's in %trackdata ?
+                      'TRACKIRPT', this%memorypath)
     call mem_allocate(this%trackdata%icell, ntrackmx, &
                       'TRACKICELL', this%memorypath)
+    call mem_allocate(this%trackdata%izone, ntrackmx, &
+                      'TRACKIZONE', this%memorypath)
     call mem_allocate(this%trackdata%istatus, ntrackmx, &
                       'TRACKISTATUS', this%memorypath)
     call mem_allocate(this%trackdata%ireason, ntrackmx, &
@@ -1423,7 +1425,7 @@ contains
     class(MethodType), pointer :: method
     real(DP) :: tmax
     logical(LGP) :: limited
-    integer(I4B) :: iprp
+    integer(I4B) :: iprp, ic
     integer(I4B) :: ntrack
     !
     call create_particle(particle) ! kluge note: elsewhere???
@@ -1452,10 +1454,11 @@ contains
             ! ntrack = this%trackdata%nrows + 1
             ! this%trackdata%nrows = ntrack
             ! this%trackdata%iprp(ntrack) = iprp
-            ! this%trackdata%ip(ntrack) = np
-            ! this%trackdata%ireason(ntrack) = ??
-            ! this%trackdata%izoneno(ntrack) = ??
+            ! this%trackdata%irpt(ntrack) = np
             ! this%trackdata%icell(ntrack) = packobj%partlist%iTrackingDomain(np, 2)
+            ! this%trackdata%izone(ntrack) = ??
+            ! this%trackdata%ireason(ntrack) = 4
+            ! this%trackdata%istatus(ntrack) = ??
             ! this%trackdata%x(ntrack) = packobj%partlist%x(np)
             ! this%trackdata%y(ntrack) = packobj%partlist%y(np)
             ! this%trackdata%z(ntrack) = packobj%partlist%z(np)
@@ -1505,16 +1508,21 @@ contains
             end if
           end if
           !
+          ! -- get the tracking method
+          method => this%get_method(particle)
+          !
           ! -- If particle released during this time step, record its
           ! -- initial location in track data
           if (particle%trelease .ge. totimc) then
             ntrack = this%trackdata%nrows + 1
+            ic = particle%iTrackingDomain(2)
             this%trackdata%nrows = ntrack
             this%trackdata%kper(ntrack) = kper
             this%trackdata%kstp(ntrack) = kstp
             this%trackdata%iprp(ntrack) = iprp
             this%trackdata%irpt(ntrack) = particle%ipart
-            this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
+            this%trackdata%icell(ntrack) = ic
+            this%trackdata%izone(ntrack) = method%izone(ic)
             this%trackdata%istatus(ntrack) = particle%istatus
             this%trackdata%ireason(ntrack) = 0 ! release
             this%trackdata%x(ntrack) = particle%x
@@ -1523,8 +1531,7 @@ contains
             this%trackdata%t(ntrack) = particle%ttrack
           end if
           !
-          ! -- Get and apply the tracking method
-          method => this%get_method(particle)
+          ! -- Apply the tracking method
           call method%apply(particle, tmax)
           !
           packobj%partlist%x(np) = particle%x ! kluge note: make subroutine to update particle in list???

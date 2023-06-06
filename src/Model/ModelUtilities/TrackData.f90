@@ -10,10 +10,10 @@ module TrackDataModule
   ! Structure of arrays to hold particle tracks. Arrays are in long format.
   ! Each particle has 1+ rows representing its track over the model domain.
   ! Particles can be uniquely identified by a combination of column values:
-  !   - todo: model ID
-  !   - particle release package (PRP) ID
-  !   - particle ID (release location ID)
-  !   - todo: particle release time
+  !   - todo: model ID?
+  !   - PRP ID
+  !   - particle release location ID
+  !   - particle release time (retrieved from partlist)
   type :: TrackDataType
     ! integer arrays
     integer(I4B), pointer :: nrows => null() ! total count of track data
@@ -22,13 +22,15 @@ module TrackDataModule
     integer(I4B), dimension(:), pointer, contiguous :: irpt ! particle ID
     integer(I4B), dimension(:), pointer, contiguous :: iprp ! PRP ID
     integer(I4B), dimension(:), pointer, contiguous :: icell ! cell ID
+    integer(I4B), dimension(:), pointer, contiguous :: izone ! todo zone number
     integer(I4B), dimension(:), pointer, contiguous :: istatus ! particle status
     integer(I4B), dimension(:), pointer, contiguous :: ireason ! reason for datum
-    ! integer(I4B), dimension(:), pointer, contiguous :: izoneno ! todo zone number
+    ! ireason can take values:
     !   0: release
     !   1: cross cell boundary
-    !   2: time step selected
+    !   2: time step selected (not implemented yet)
     !   3: termination
+    !   4: inactive?
 
     ! double arrays
     real(DP), dimension(:), pointer, contiguous :: x ! current x coordinate
