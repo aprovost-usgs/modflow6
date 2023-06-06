@@ -13,6 +13,7 @@ from flopy.utils.gridutil import uniform_flow_field
 from flopy.utils.gridintersect import GridIntersect
 from pytest_cases import parametrize_with_cases, parametrize
 from shapely.geometry import MultiPoint, LineString
+from framework import TestFramework
 from simulation import TestSimulation
 
 
@@ -727,8 +728,10 @@ class PrtCases:
         # for example 1A
         nreleasepts1a = len(releasepts['1A'])
         pd = {0: ["FIRST"],}
+        track_csv_1a = "{}_1a.trk.csv".format(nm_prt)
         flopy.mf6.ModflowPrtprp(
             prt, pname="prp1a", filename="{}_1a.prp".format(nm_prt),
+            trackcsv_filerecord=[track_csv_1a],
             nreleasepts=nreleasepts1a, packagedata=releasepts['1A'],
             perioddata=pd,
         )
@@ -737,8 +740,10 @@ class PrtCases:
         # for example 1B
         nreleasepts1b = len(releasepts['1B'])
         pd = {0: ["FIRST"],}
+        track_csv_1b = "{}_1b.trk.csv".format(nm_prt)
         flopy.mf6.ModflowPrtprp(
             prt, pname="prp1b", filename="{}_1b.prp".format(nm_prt),
+            trackcsv_filerecord=[track_csv_1b],
             nreleasepts=nreleasepts1b, packagedata=releasepts['1B'],
             perioddata=pd,
         )
@@ -781,7 +786,11 @@ class PrtCases:
         return ctx, sim, None, self.eval_mp7_p01
 
     def eval_mp7_p01(self, ctx, sim):
-        pass
+        # make sure particle track output CSV files exist
+        track_csv_1a = Path(sim.simpath) / f"{ctx.name}_prt_1a.trk.csv"
+        track_csv_1b = Path(sim.simpath) / f"{ctx.name}_prt_1b.trk.csv"
+        assert track_csv_1a.is_file()
+        assert track_csv_1b.is_file()
 
     # MODPATH 7 example problem 2
     case_mp7_p02 = Case(
@@ -1753,16 +1762,15 @@ def test_prt_models(case, targets):
     if cmp:
         cmp.write_simulation()
     
-    test = TestSimulation(
-        name=ctx.name,
-        exe_dict=targets,
-        exfunc=lambda s: evl(ctx, s),  # hack the context into the evaluation function for now
-        idxsim=0,
-        mf6_regression=True,
-        require_failure=ctx.xfail,
-        make_comparison=False,
-    )
-
-    test.set_model(sim.simulation_data.mfpath.get_sim_path(), testModel=False)
-    test.run()
-    test.compare()
+    test = TestFramework()
+    test.run(
+        TestSimulation(
+            name=ctx.name,
+            exe_dict=targets,
+            exfunc=lambda s: evl(ctx, s),  # hack the context into the evaluation function for now
+            idxsim=0,
+            mf6_regression=True,
+            require_failure=ctx.xfail,
+            make_comparison=False,
+        ),
+        sim.simulation_data.mfpath.get_sim_path())
