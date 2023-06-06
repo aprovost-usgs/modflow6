@@ -1136,7 +1136,7 @@ contains
     call mem_deallocate(this%trackdata%kper)
     call mem_deallocate(this%trackdata%kstp)
     call mem_deallocate(this%trackdata%iprp)
-    call mem_deallocate(this%trackdata%ip)
+    call mem_deallocate(this%trackdata%irpt)
     call mem_deallocate(this%trackdata%icell)
     call mem_deallocate(this%trackdata%istatus)
     call mem_deallocate(this%trackdata%ireason)
@@ -1231,21 +1231,21 @@ contains
     !
     ntrackmx = 1000000 ! kluge hardwire
     call mem_allocate(this%itrack, this%nprp + 1, &
-                      'ITRACK', this%memorypath)
+                      'TRACKNROWS', this%memorypath)
     call mem_allocate(this%trackdata%kper, ntrackmx, &
-                      'ITRACKKPER', this%memorypath)
+                      'TRACKKPER', this%memorypath)
     call mem_allocate(this%trackdata%kstp, ntrackmx, &
-                      'ITRACKKSTP', this%memorypath) ! kluge note: ok that it's in %trackdata ?
+                      'TRACKKSTP', this%memorypath) ! kluge note: ok that it's in %trackdata ?
     call mem_allocate(this%trackdata%iprp, ntrackmx, &
-                      'ITRACKPRPID', this%memorypath)
-    call mem_allocate(this%trackdata%ip, ntrackmx, &
-                      'ITRACKPARTID', this%memorypath) ! kluge note: ok that it's in %trackdata ?
+                      'TRACKIPRP', this%memorypath)
+    call mem_allocate(this%trackdata%irpt, ntrackmx, &
+                      'TRACKIRPT', this%memorypath) ! kluge note: ok that it's in %trackdata ?
     call mem_allocate(this%trackdata%icell, ntrackmx, &
-                      'ITRACKCELLID', this%memorypath)
+                      'TRACKICELL', this%memorypath)
     call mem_allocate(this%trackdata%istatus, ntrackmx, &
-                      'ITRACKSTATUS', this%memorypath)
+                      'TRACKISTATUS', this%memorypath)
     call mem_allocate(this%trackdata%ireason, ntrackmx, &
-                      'ITRACKREASON', this%memorypath)
+                      'TRACKIREASON', this%memorypath)
     call mem_allocate(this%trackdata%x, ntrackmx, &
                       'XTRACK', this%memorypath)
     call mem_allocate(this%trackdata%y, ntrackmx, &
@@ -1513,7 +1513,7 @@ contains
             this%trackdata%kper(ntrack) = kper
             this%trackdata%kstp(ntrack) = kstp
             this%trackdata%iprp(ntrack) = iprp
-            this%trackdata%ip(ntrack) = particle%ipart
+            this%trackdata%irpt(ntrack) = particle%ipart
             this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
             this%trackdata%istatus(ntrack) = particle%istatus
             this%trackdata%ireason(ntrack) = 0 ! release

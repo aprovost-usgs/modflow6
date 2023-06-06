@@ -17,7 +17,7 @@ from simulation import TestSimulation
 
 
 dtype = {
-    "names": ["kper", "kstp", "iprp", "ip", "icell", "istatus", "ireason", "trelease", "t", "x", "y", "z"],
+    "names": ["kper", "kstp", "iprp", "irpt", "icell", "istatus", "ireason", "trelease", "t", "x", "y", "z"],
     "formats": ["<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<i4", "<f8", "<f8", "<f8", "<f8", "<f8"],
 }
 

@@ -145,7 +145,7 @@ contains
     this%trackdata%kper(ntrack) = kper
     this%trackdata%kstp(ntrack) = kstp
     this%trackdata%iprp(ntrack) = particle%iprp
-    this%trackdata%ip(ntrack) = particle%ipart
+    this%trackdata%irpt(ntrack) = particle%ipart
     this%trackdata%icell(ntrack) = particle%iTrackingDomain(2)
     this%trackdata%istatus(ntrack) = particle%istatus
     if (particle%istatus > 1) then

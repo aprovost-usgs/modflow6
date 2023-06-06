@@ -850,7 +850,7 @@ contains
         call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%itrkhdr, '(a,/,a)') &
-          'kper,kstp,iprp,ip,icell,istatus,ireason,trelease,t,x,y,z', &
+          'kper,kstp,iprp,irpt,icell,istatus,ireason,trelease,t,x,y,z', &
           '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<f8,<f8,<f8,<f8,<f8'
       else
         call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
@@ -868,7 +868,7 @@ contains
                       filstat_opt='REPLACE')
         write (this%iout, fmttrkcsv) trim(adjustl(fname)), this%itrkcsv
         write (this%itrkcsv, '(a)') &
-          'kper,kstp,prpid,partid,cellid,status,reason,t,x,y,z'
+          'kper,kstp,iprp,irpt,icell,istatus,ireason,trelease,t,x,y,z'
       else
         call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
           &FOLLOWED BY FILEOUT')
@@ -1179,19 +1179,22 @@ contains
     ! -- local
     integer(I4B) :: itrack
     integer(I4B) :: kper, kstp
-    integer(I4B) :: ip, iprp, icell, istatus, ireason ! todo izoneno
+    integer(I4B) :: iprp, irpt, icell, istatus, ireason ! todo izoneno
     real(DP) :: trelease, t, x, y, z
+    namelist /track_datum/ &
+      kper, kstp, iprp, irpt, icell, istatus, ireason, &
+      trelease, t, x, y, z
     !
     ! -- loop over particle track data
     do itrack = this%itrack1 + 1, this%itrack2
       kper = this%trackdata%kper(itrack)
       kstp = this%trackdata%kstp(itrack)
-      ip = this%trackdata%ip(itrack)
       iprp = this%trackdata%iprp(itrack) ! todo: extract from particle list, don't store in trackdata
+      irpt = this%trackdata%irpt(itrack)
       icell = this%trackdata%icell(itrack)
       istatus = this%trackdata%istatus(itrack)
       ireason = this%trackdata%ireason(itrack)
-      trelease = this%partlist%trelease(ip)
+      trelease = this%partlist%trelease(irpt)
       t = this%trackdata%t(itrack)
       x = this%trackdata%x(itrack)
       y = this%trackdata%y(itrack)
@@ -1200,10 +1203,12 @@ contains
       ! write row to file
       if (csv) then
         write (itrkun, '(*(G0,:,","))') &
-          kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z
+          kper, kstp, iprp, irpt, icell, istatus, ireason, &
+          trelease, t, x, y, z
       else
         write (itrkun) &
-          kper, kstp, iprp, ip, icell, istatus, ireason, trelease, t, x, y, z
+          kper, kstp, iprp, irpt, icell, istatus, ireason, &
+          trelease, t, x, y, z
       end if
     end do
   end subroutine prp_track_write
@@ -1219,19 +1224,16 @@ contains
     character(len=16), dimension(12) :: auxtxt
     real(DP), dimension(12) :: aux
     integer(I4B) :: nlist
-    integer(I4B) :: ip
+    integer(I4B) :: irpt, icell, itrack
     integer(I4B) :: naux
-    integer(I4B) :: icell
-    integer(I4B) :: irpt
-    integer(I4B) :: itrack
     !
     if (icbcun /= 0) then
       !
       ! -- Write the header
       text = '      DATA-PRTCL'
       naux = 12
-      auxtxt(:) = ['            kper', '            kstp', '          iprpid', &
-                   '         ipartid', '          cellid', '         istatus', &
+      auxtxt(:) = ['            kper', '            kstp', '            iprp', &
+                   '            irpt', '           icell', '         istatus', &
                    '         ireason', '        trelease', '               t', &
                    '               x', '               y', '               z']
       nlist = this%itrack2 - this%itrack1
@@ -1248,17 +1250,16 @@ contains
       !
       ! -- Write a zero for Q and particle data as aux variables
       do itrack = this%itrack1 + 1, this%itrack2
-        ip = this%trackdata%ip(itrack)
-        irpt = this%partlist%irpt(ip)
+        irpt = this%trackdata%irpt(itrack)
         icell = this%trackdata%icell(itrack)
         aux(1) = this%trackdata%kper(itrack)
         aux(2) = this%trackdata%kstp(itrack)
         aux(3) = this%trackdata%iprp(itrack) ! todo: as above
-        aux(4) = ip
+        aux(4) = irpt
         aux(5) = icell
         aux(6) = this%trackdata%istatus(itrack)
         aux(7) = this%trackdata%ireason(itrack)
-        aux(8) = this%partlist%trelease(ip)
+        aux(8) = this%partlist%trelease(irpt)
         aux(9) = this%trackdata%t(itrack)
         aux(10) = this%trackdata%x(itrack)
         aux(11) = this%trackdata%y(itrack)
