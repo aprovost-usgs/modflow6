@@ -216,10 +216,11 @@ contains
         else
           this%trackdata%ireason(ntrack) = 1 ! crossing cell boundary
         end if
+        this%trackdata%trelease(ntrack) = particle%trelease
+        this%trackdata%t(ntrack) = particle%ttrack
         this%trackdata%x(ntrack) = particle%x
         this%trackdata%y(ntrack) = particle%y
         this%trackdata%z(ntrack) = particle%z
-        this%trackdata%t(ntrack) = particle%ttrack
       end if
       !
       ! -- Transform particle location into local cell coordinates
@@ -259,10 +260,11 @@ contains
     else
       this%trackdata%ireason(ntrack) = 1 ! crossing cell boundary
     end if
+    this%trackdata%trelease(ntrack) = particle%trelease
+    this%trackdata%t(ntrack) = particle%ttrack
     this%trackdata%x(ntrack) = particle%x
     this%trackdata%y(ntrack) = particle%y
     this%trackdata%z(ntrack) = particle%z
-    this%trackdata%t(ntrack) = particle%ttrack
     !
     return
     !

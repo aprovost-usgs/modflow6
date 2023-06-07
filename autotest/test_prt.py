@@ -101,20 +101,24 @@ def test_fmi_basic(function_tmpdir, targets):
             # particle id, k, i, j, localx, localy, localz
             (0, 0, 0, 0, 0.5, 0.5, 0.5)
         ]
-        prt_track_file = f"{name}.trk"
-        prt_track_csv_file = f"{name}.trk.csv"
+        prp_track_file = f"{name}.prp.trk"
+        prp_track_csv_file = f"{name}.prp.trk.csv"
         prp = flopy.mf6.ModflowPrtprp(
             prt, pname="prp1", filename=f"{name}_1.prp",
-            track_filerecord=[prt_track_file],
-            trackcsv_filerecord=[prt_track_csv_file],
+            track_filerecord=[prp_track_file],
+            trackcsv_filerecord=[prp_track_csv_file],
             nreleasepts=len(releasepts), packagedata=releasepts,
             perioddata={0: ["FIRST"]},
         )
         prt_budget_file = f"{name}.cbb"
+        prt_track_file = f"{name}.trk"
+        prt_track_csv_file = f"{name}.trk.csv"
         oc = flopy.mf6.ModflowPrtoc(
             prt,
             pname="oc",
             budget_filerecord=[prt_budget_file],
+            # track_filerecord=[prt_track_file],
+            # trackcsv_filerecord=[prt_track_csv_file],
             saverecord=[("BUDGET", "ALL")],
         )
         gwf_budget_file = f"{name}.bud"
@@ -137,6 +141,8 @@ def test_fmi_basic(function_tmpdir, targets):
         assert (ws / prt_budget_file).is_file()
         assert (ws / prt_track_file).is_file()
         assert (ws / prt_track_csv_file).is_file()
+        assert (ws / prp_track_file).is_file()
+        assert (ws / prp_track_csv_file).is_file()
 
         def get_dtype(path: os.PathLike):
             hdr_lns = open(path).readlines()
@@ -149,7 +155,7 @@ def test_fmi_basic(function_tmpdir, targets):
             assert data.dtype == dtype
 
         # get dtype from ascii header file
-        dt = get_dtype(ws / f"{prt_track_file}.hdr")
+        dt = get_dtype(ws / Path(prt_track_file).with_suffix(".hdr"))
 
         # check particle tracks written to binary output file 
         data_bin = np.fromfile(ws / prt_track_file, dtype=dt)

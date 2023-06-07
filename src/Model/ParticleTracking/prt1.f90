@@ -5,7 +5,7 @@ module PrtModule
   use KindModule, only: DP, I4B, LGP
   use InputOutputModule, only: ParseLine, upcase, lowcase
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, &
-                             DONE, LENPAKLOC, LENBUDTXT
+                             DONE, LENPAKLOC, LENBUDTXT, MNORMAL
   use VersionModule, only: write_listfile_header
   use TrackingModelModule, only: TrackingModelType
   use ExplicitModelModule, only: ExplicitModelType
@@ -71,12 +71,24 @@ module PrtModule
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: nprp => null() ! number of PRP packages in the model
-    integer(I4B), dimension(:), pointer, contiguous :: itrack ! kluge
+
+    ! array of indices into trackdata at which each PRP begins, e.g.
+    !   - itrack(1) = 0 for the 1st PRP
+    !   - itrack(2) indexes 1st datum from the 2nd PRP
+    !   - etc
+    integer(I4B), dimension(:), pointer, contiguous :: itrack
+
+    ! structure of arrays to store particle track data (includes all PRPs together)
     type(TrackDataType), pointer :: trackdata ! kluge?
 
     real(DP), dimension(:), pointer, contiguous :: masssto => null() !< particle mass storage in cells, new value
     real(DP), dimension(:), pointer, contiguous :: massstoold => null() !< particle mass storage in cells, old value
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< particle mass storage rate in cells
+
+    ! output files
+    integer(I4B), pointer :: itrkout => null()
+    integer(I4B), pointer :: itrkhdr => null()
+    integer(I4B), pointer :: itrkcsv => null()
 
   contains
 
@@ -382,6 +394,8 @@ contains
     call this%methodDisv%init(this%fmi, this%flowja, this%mip%porosity, &
                               this%mip%retfactor, this%mip%izone, &
                               this%trackdata)
+    !
+
     !
     ! -- return
     return
@@ -998,13 +1012,78 @@ contains
   !> @brief Save particle tracks
   !>
   subroutine prt_ot_trk(this, itrksave)
+    ! -- modules
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: getunit, openfile, lowcase
+    use TrackDataModule, only: TRACKHEADERS, TRACKTYPES
     ! -- dummy
     class(PrtModelType) :: this
     integer(I4B), intent(in) :: itrksave
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
+    logical(LGP) :: opened
+    character(len=len(this%name)) :: name
+    ! -- formats
+    character(len=*), parameter :: fmttrkbin = &
+      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
+    &'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmttrkcsv = &
+      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO CSV FILE: ', a, /4x, &
+    &'OPENED ON UNIT: ', I0)"
 
+    ! save particle track data to binary file
+    if (this%itrkout /= 0) then
+      ! open binary output file
+      inquire (unit=this%itrkout, opened=opened)
+      if (.not. opened) then
+        this%itrkout = getunit()
+        name = this%name
+        call lowcase(name)
+        call openfile(this%itrkout, this%iout, trim(name)//'.trk', &
+                      'DATA(BINARY)', form, access, &
+                      filstat_opt='REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmttrkbin) &
+          trim(adjustl(trim(this%name)//'.trk')), this%itrkout
+      end if
+
+      ! open/write ascii header file
+      inquire (unit=this%itrkhdr, opened=opened)
+      if (.not. opened) then
+        this%itrkhdr = getunit()
+        call openfile(this%itrkhdr, this%iout, trim(name)//'.hdr', &
+                      'CSV', filstat_opt='REPLACE', mode_opt=MNORMAL)
+        write (this%itrkhdr, '(a,/,a)') &
+          TRACKHEADERS, &
+          TRACKTYPES
+      end if
+
+      ! write track data to binary file
+      call this%trackdata%save_track_data(this%itrkout, csv=.false., &
+                                          itrack1=1, &
+                                          itrack2=this%trackdata%nrows)
+    end if
+
+    ! save particle track data to CSV file
+    if (this%itrkcsv /= 0) then
+      inquire (unit=this%itrkcsv, opened=opened)
+      if (.not. opened) then
+        name = this%name
+        call lowcase(name)
+        call openfile(this%itrkcsv, this%iout, trim(name)//'.trk.csv', &
+                      'CSV', filstat_opt='REPLACE')
+        write (this%iout, fmttrkcsv) &
+          trim(adjustl(trim(name)//'.trk.csv')), this%itrkcsv
+        write (this%itrkcsv, '(a)') TRACKHEADERS
+      end if
+
+      ! write track data to CSV file
+      call this%trackdata%save_track_data(this%itrkcsv, csv=.true., &
+                                          itrack1=1, &
+                                          itrack2=this%trackdata%nrows)
+    end if
+
+    ! save particle track output files for each PRP individually
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       select type (packobj)
@@ -1127,6 +1206,9 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%nprp)
     call mem_deallocate(this%trackdata%nrows)
+    call mem_deallocate(this%itrkout)
+    call mem_deallocate(this%itrkhdr)
+    call mem_deallocate(this%itrkcsv)
     !
     ! -- Arrays
     call mem_deallocate(this%masssto)
@@ -1141,10 +1223,11 @@ contains
     call mem_deallocate(this%trackdata%izone)
     call mem_deallocate(this%trackdata%istatus)
     call mem_deallocate(this%trackdata%ireason)
+    call mem_deallocate(this%trackdata%trelease)
+    call mem_deallocate(this%trackdata%t)
     call mem_deallocate(this%trackdata%x)
     call mem_deallocate(this%trackdata%y)
     call mem_deallocate(this%trackdata%z)
-    call mem_deallocate(this%trackdata%t)
     !
     ! -- Track data object
     deallocate (this%trackdata)
@@ -1201,6 +1284,9 @@ contains
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%nprp, 'NPRP', this%memoryPath) ! kluge?
     call mem_allocate(this%trackdata%nrows, 'NTRACKROWS', this%memoryPath) ! kluge?
+    call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
+    call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
+    call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     !
     ! this%inpin  = 0
     this%infmi = 0
@@ -1214,6 +1300,9 @@ contains
     this%inobs = 0
     this%nprp = 0
     this%trackdata%nrows = 0
+    this%itrkout = 1 ! kluge to enable output
+    this%itrkhdr = 1 ! "
+    this%itrkcsv = 1 ! "
     !
     ! -- return
     return
@@ -1229,9 +1318,10 @@ contains
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
     !
-    ntrackmx = 1000000 ! kluge hardwire
+    ntrackmx = 1000000 ! kluge hardwire (todo dynamically resize)
+
     call mem_allocate(this%itrack, this%nprp + 1, &
-                      'TRACKNROWS', this%memorypath)
+                      'ITRACK', this%memorypath)
     call mem_allocate(this%trackdata%kper, ntrackmx, &
                       'TRACKKPER', this%memorypath)
     call mem_allocate(this%trackdata%kstp, ntrackmx, &
@@ -1248,14 +1338,16 @@ contains
                       'TRACKISTATUS', this%memorypath)
     call mem_allocate(this%trackdata%ireason, ntrackmx, &
                       'TRACKIREASON', this%memorypath)
-    call mem_allocate(this%trackdata%x, ntrackmx, &
-                      'XTRACK', this%memorypath)
-    call mem_allocate(this%trackdata%y, ntrackmx, &
-                      'YTRACK', this%memorypath)
-    call mem_allocate(this%trackdata%z, ntrackmx, &
-                      'ZTRACK', this%memorypath)
+    call mem_allocate(this%trackdata%trelease, ntrackmx, &
+                      'TRACKTRELEASE', this%memorypath)
     call mem_allocate(this%trackdata%t, ntrackmx, &
-                      'TTRACK', this%memorypath)
+                      'TRACKT', this%memorypath)
+    call mem_allocate(this%trackdata%x, ntrackmx, &
+                      'TRACKX', this%memorypath)
+    call mem_allocate(this%trackdata%y, ntrackmx, &
+                      'TRACKY', this%memorypath)
+    call mem_allocate(this%trackdata%z, ntrackmx, &
+                      'TRACKZ', this%memorypath)
     !
     call mem_allocate(this%masssto, this%dis%nodes, &
                       'MASSSTO', this%memoryPath)

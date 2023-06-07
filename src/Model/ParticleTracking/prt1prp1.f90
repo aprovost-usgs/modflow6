@@ -1157,12 +1157,16 @@ contains
     !
     ! -- write particle track data to binary output file
     if (this%itrkout /= 0 .and. itrksave /= 0) then
-      call this%prp_track_write(this%itrkout, csv=.false.)
+      call this%trackdata%save_track_data(this%itrkout, csv=.false., &
+                                          itrack1=this%itrack1 + 1, &
+                                          itrack2=this%itrack2)
     end if
     !
     ! -- write particle track data to CSV output file
     if (this%itrkcsv /= 0 .and. itrksave /= 0) then
-      call this%prp_track_write(this%itrkcsv, csv=.true.)
+      call this%trackdata%save_track_data(this%itrkcsv, csv=.true., &
+                                          itrack1=this%itrack1 + 1, &
+                                          itrack2=this%itrack2)
     end if
     !
     return
@@ -1192,7 +1196,7 @@ contains
       izone = this%trackdata%izone(itrack)
       istatus = this%trackdata%istatus(itrack)
       ireason = this%trackdata%ireason(itrack)
-      trelease = this%partlist%trelease(irpt)
+      trelease = this%trackdata%trelease(itrack)
       t = this%trackdata%t(itrack)
       x = this%trackdata%x(itrack)
       y = this%trackdata%y(itrack)
@@ -1230,10 +1234,11 @@ contains
       ! -- Write the header
       text = '      DATA-PRTCL'
       naux = 13
-      auxtxt(:) = ['            kper', '            kstp', '            iprp', &
-                   '            irpt', '           icell', '           izone', &
-                   '         istatus', &
-                   '         ireason', '        trelease', '               t', &
+      auxtxt(:) = ['            kper', '            kstp', &
+                   '            iprp', '            irpt', &
+                   '           icell', '           izone', &
+                   '         istatus', '         ireason', &
+                   '        trelease', '               t', &
                    '               x', '               y', '               z']
       nlist = this%itrack2 - this%itrack1
       call this%dis%record_srcdst_list_header(text, &
@@ -1259,7 +1264,7 @@ contains
         aux(6) = this%trackdata%izone(itrack)
         aux(7) = this%trackdata%istatus(itrack)
         aux(8) = this%trackdata%ireason(itrack)
-        aux(9) = this%partlist%trelease(irpt)
+        aux(9) = this%trackdata%trelease(itrack)
         aux(10) = this%trackdata%t(itrack)
         aux(11) = this%trackdata%x(itrack)
         aux(12) = this%trackdata%y(itrack)
