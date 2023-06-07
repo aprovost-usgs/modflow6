@@ -786,6 +786,7 @@ contains
     use OpenSpecModule, only: access, form
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use InputOutputModule, only: urword, getunit, openfile
+    use TrackDataModule, only: TRACKHEADERS, TRACKTYPES
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -849,9 +850,7 @@ contains
         fname = trim(fname)//'.hdr'
         call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%itrkhdr, '(a,/,a)') &
-          'kper,kstp,iprp,irpt,icell,izone,istatus,ireason,trelease,t,x,y,z', &
-          '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<i4,<f8,<f8,<f8,<f8,<f8'
+        write (this%itrkhdr, '(a,/,a)') TRACKHEADERS, TRACKTYPES
       else
         call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -867,8 +866,7 @@ contains
         call openfile(this%itrkcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmttrkcsv) trim(adjustl(fname)), this%itrkcsv
-        write (this%itrkcsv, '(a)') &
-          'kper,kstp,iprp,irpt,icell,izone,istatus,ireason,trelease,t,x,y,z'
+        write (this%itrkcsv, '(a)') TRACKHEADERS
       else
         call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
           &FOLLOWED BY FILEOUT')
