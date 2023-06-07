@@ -880,7 +880,8 @@ contains
     !   call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
     ! end if
 
-    ! -- Save particle information from PRP packages
+    ! -- kluge: save particle information from PRP packages
+    ! -- todo: remove now that dedicated track output files are implemented
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       select type (packobj)
@@ -1051,7 +1052,7 @@ contains
       inquire (unit=this%itrkhdr, opened=opened)
       if (.not. opened) then
         this%itrkhdr = getunit()
-        call openfile(this%itrkhdr, this%iout, trim(name)//'.hdr', &
+        call openfile(this%itrkhdr, this%iout, trim(name)//'.trk.hdr', &
                       'CSV', filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%itrkhdr, '(a,/,a)') &
           TRACKHEADERS, &

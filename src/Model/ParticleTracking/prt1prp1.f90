@@ -846,7 +846,7 @@ contains
         write (this%iout, fmttrkbin) trim(adjustl(fname)), this%itrkout
         ! open and write ascii header spec file
         this%itrkhdr = getunit()
-        fname = trim(fname)//'.hdr'
+        fname = trim(fname)//'.trk.hdr'
         call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%itrkhdr, '(a,/,a)') TRACKHEADERS, TRACKTYPES
@@ -1170,6 +1170,7 @@ contains
   end subroutine prp_ot_trk
 
   !> @brief Save particle information in binary format to icbcun
+  !! todo: remove now that dedicated track output files are implemented
   !<
   subroutine sav_particles(this, icbcun)
     ! -- dummy
