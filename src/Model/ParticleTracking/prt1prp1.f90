@@ -98,7 +98,6 @@ module PrtPrpModule
     procedure, public :: bnd_df_obs => prp_df_obs
     ! ! -- methods for time series
     ! procedure, public :: bnd_rp_ts => prp_rp_ts
-    procedure, private :: prp_track_write
   end type PrtPrpType
 
 contains
@@ -1169,49 +1168,6 @@ contains
     !
     return
   end subroutine prp_ot_trk
-
-  !> @brief Write track data to a binary or CSV output file
-  subroutine prp_track_write(this, itrkun, csv)
-    ! -- modules
-    use ParticleModule, only: ParticleListType
-    ! -- dummy
-    class(PrtPrpType), intent(inout) :: this
-    integer(I4B) :: itrkun
-    logical(LGP), intent(in) :: csv
-    ! -- local
-    integer(I4B) :: itrack
-    integer(I4B) :: kper, kstp
-    integer(I4B) :: iprp, irpt, icell, izone, istatus, ireason
-    real(DP) :: trelease, t, x, y, z
-    !
-    ! -- loop over particle track data
-    do itrack = this%itrack1 + 1, this%itrack2
-      kper = this%trackdata%kper(itrack)
-      kstp = this%trackdata%kstp(itrack)
-      iprp = this%trackdata%iprp(itrack) ! todo: extract from particle list, don't store in trackdata
-      irpt = this%trackdata%irpt(itrack)
-      icell = this%trackdata%icell(itrack)
-      izone = this%trackdata%izone(itrack)
-      istatus = this%trackdata%istatus(itrack)
-      ireason = this%trackdata%ireason(itrack)
-      trelease = this%trackdata%trelease(itrack)
-      t = this%trackdata%t(itrack)
-      x = this%trackdata%x(itrack)
-      y = this%trackdata%y(itrack)
-      z = this%trackdata%z(itrack)
-
-      ! write row to file
-      if (csv) then
-        write (itrkun, '(*(G0,:,","))') &
-          kper, kstp, iprp, irpt, icell, izone, istatus, ireason, &
-          trelease, t, x, y, z
-      else
-        write (itrkun) &
-          kper, kstp, iprp, irpt, icell, izone, istatus, ireason, &
-          trelease, t, x, y, z
-      end if
-    end do
-  end subroutine prp_track_write
 
   !> @brief Save particle information in binary format to icbcun
   !<
