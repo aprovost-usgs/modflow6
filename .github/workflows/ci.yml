@@ -17,6 +17,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'doc/**'
+  schedule:
+    - cron: '0 2 * * *' # run at 2 AM UTC
 env:
   LABEL: prt
 jobs:
