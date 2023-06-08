@@ -12,7 +12,7 @@ module ParticleModule
   type ParticleType
     private
     integer, public :: ipart ! particle number (index)
-    integer, public :: iprp
+    integer, public :: iprp ! particle release point number (index)
     ! integer, public :: igroup ! index of particle group to which the particle belongs
     ! integer, public :: imodel ! index of model to which the particle currently belongs
     ! double precision, public :: velmult ! velocity multiplier for the particle (determined by group)

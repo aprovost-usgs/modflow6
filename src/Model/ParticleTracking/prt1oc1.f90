@@ -18,9 +18,17 @@ module PrtOcModule
   !<
   type, extends(OutputControlType) :: PrtOcType
 
+    ! output files
+    integer(I4B), pointer :: itrkout => null()
+    integer(I4B), pointer :: itrkhdr => null()
+    integer(I4B), pointer :: itrkcsv => null()
+
   contains
     procedure :: oc_ar
+    procedure :: oc_da => prt_oc_da
+    procedure :: allocate_scalars => prt_oc_allocate_scalars
     procedure :: read_options => prt_oc_read_options
+
   end type PrtOcType
 
 contains
@@ -55,12 +63,46 @@ contains
     return
   end subroutine oc_cr
 
+  subroutine prt_oc_allocate_scalars(this, name_model)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
+    ! -- dummy
+    class(PrtOcType) :: this
+    character(len=*), intent(in) :: name_model !< name of model
+    !
+    this%memoryPath = create_mem_path(name_model, 'OC')
+    !
+    allocate (this%name_model)
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
+    call mem_allocate(this%iperoc, 'IPEROC', this%memoryPath)
+    call mem_allocate(this%iocrep, 'IOCREP', this%memoryPath)
+    call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
+    call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
+    call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
+    !
+    this%name_model = name_model
+    this%inunit = 0
+    this%iout = 0
+    this%ibudcsv = 0
+    this%iperoc = 0
+    this%iocrep = 0
+    this%itrkout = 0
+    this%itrkhdr = 0
+    this%itrkcsv = 0
+    !
+    return
+  end subroutine prt_oc_allocate_scalars
+
   !> @ brief Allocate and read PrtOcType
   !!
   !!  Setup concentration, budget, and particle tracks as output control variables.
-  !!  todo: how to pass track data to OC? each column as an array via init_dbl etc?
   !<
   subroutine oc_ar(this, conc, dis, dnodata)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(PrtOcType) :: this !< PrtOcType object
     real(DP), dimension(:), pointer, contiguous, intent(in) :: conc !< model concentration
@@ -100,8 +142,33 @@ contains
     return
   end subroutine oc_ar
 
+  subroutine prt_oc_da(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(PrtOcType) :: this
+    integer(I4B) :: i
+    !
+    do i = 1, size(this%ocdobj)
+      call this%ocdobj(i)%ocd_da()
+    end do
+    deallocate (this%ocdobj)
+    !
+    deallocate (this%name_model)
+    call mem_deallocate(this%inunit)
+    call mem_deallocate(this%iout)
+    call mem_deallocate(this%ibudcsv)
+    call mem_deallocate(this%iperoc)
+    call mem_deallocate(this%iocrep)
+    call mem_deallocate(this%itrkout)
+    call mem_deallocate(this%itrkhdr)
+    call mem_deallocate(this%itrkcsv)
+  end subroutine prt_oc_da
+
   subroutine prt_oc_read_options(this)
     ! -- modules
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: getunit, openfile, lowcase
     use ConstantsModule, only: LINELENGTH
     use TrackDataModule, only: TRACKHEADERS, TRACKTYPES
     use SimModule, only: store_error, store_error_unit
@@ -151,44 +218,44 @@ contains
           call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                         filstat_opt='REPLACE')
           found = .true.
-          ! case ('TRACK')
-          !   call this%parser%GetStringCaps(keyword)
-          !   if (keyword == 'FILEOUT') then
-          !     call this%parser%GetString(fname)
-          !     this%itrkout = getunit()
-          !     call openfile(this%itrkout, this%iout, fname, 'DATA(BINARY)', &
-          !                   form, access, filstat_opt='REPLACE', &
-          !                   mode_opt=MNORMAL)
-          !     write (this%iout, fmttrkbin) trim(adjustl(fname)), this%itrkout
-          !     ! open and write ascii header file
-          !     this%itrkhdr = getunit()
-          !     fname = trim(fname)//'.hdr'
-          !     call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
-          !                   filstat_opt='REPLACE', mode_opt=MNORMAL)
-          !     write (this%itrkhdr, '(a,/,a)') &
-          !       TRACKHEADERS, &
-          !       TRACKTYPES
-          !   else
-          !     call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
-          !                     'FOLLOWED BY FILEOUT')
-          !   end if
-          !   found = .true.
-          ! case ('TRACKCSV')
-          !   call this%parser%GetStringCaps(keyword)
-          !   if (keyword == 'FILEOUT') then
-          !     ! parse filename
-          !     call this%parser%GetString(fname)
-          !     ! open CSV file and write headers
-          !     this%itrkcsv = getunit()
-          !     call openfile(this%itrkcsv, this%iout, fname, 'CSV', &
-          !                   filstat_opt='REPLACE')
-          !     write (this%iout, fmttrkcsv) trim(adjustl(fname)), this%itrkcsv
-          !     write (this%itrkcsv, '(a)') TRACKHEADERS
-          !   else
-          !     call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
-          !       &FOLLOWED BY FILEOUT')
-          !   end if
-          !   found = .true.
+        case ('TRACK')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            ! parse filename
+            call this%parser%GetString(fname)
+            ! open binary track output file
+            this%itrkout = getunit()
+            call openfile(this%itrkout, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, filstat_opt='REPLACE', &
+                          mode_opt=MNORMAL)
+            write (this%iout, fmttrkbin) trim(adjustl(fname)), this%itrkout
+            ! open and write ascii track header file
+            this%itrkhdr = getunit()
+            fname = trim(fname)//'.hdr'
+            call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
+                          filstat_opt='REPLACE', mode_opt=MNORMAL)
+            write (this%itrkhdr, '(a,/,a)') TRACKHEADERS, TRACKTYPES
+          else
+            call store_error('OPTIONAL TRACK KEYWORD MUST BE '// &
+                             'FOLLOWED BY FILEOUT')
+          end if
+          found = .true.
+        case ('TRACKCSV')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            ! parse filename
+            call this%parser%GetString(fname)
+            ! open CSV track output file and write headers
+            this%itrkcsv = getunit()
+            call openfile(this%itrkcsv, this%iout, fname, 'CSV', &
+                          filstat_opt='REPLACE')
+            write (this%iout, fmttrkcsv) trim(adjustl(fname)), this%itrkcsv
+            write (this%itrkcsv, '(a)') TRACKHEADERS
+          else
+            call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
+              &FOLLOWED BY FILEOUT')
+          end if
+          found = .true.
         case default
           found = .false.
         end select

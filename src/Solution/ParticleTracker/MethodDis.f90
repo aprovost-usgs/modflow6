@@ -26,6 +26,7 @@ module MethodDisModule
     type(CellRectType), pointer :: cellRect ! rectangular cell
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< pointer to aquifer porosity
     real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< pointer to retardation factor
+    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number
   contains
     procedure, public :: destroy ! destructor for the method
     procedure, public :: init ! initializes the method

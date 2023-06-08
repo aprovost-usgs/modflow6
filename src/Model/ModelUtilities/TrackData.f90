@@ -10,34 +10,34 @@ module TrackDataModule
   character(len=*), parameter, public :: TRACKHEADERS = &
                 'kper,kstp,iprp,irpt,icell,izone,istatus,ireason,&
                 &trelease,t,x,y,z'
+
   character(len=*), parameter, public :: TRACKTYPES = &
                              '<i4,<i4,<i4,<i4,<i4,<i4,<i4,<i4,&
                              &<f8,<f8,<f8,<f8,<f8'
 
   ! Structure of arrays to hold particle tracks. Arrays are in long format.
-  ! Each particle has 1+ rows representing its track over the model domain.
+  ! Each particle's track across the simulation domain consists of 1+ rows.
   ! Particles can be uniquely identified by a combination of column values:
-  !   - todo: model ID?
-  !   - PRP ID
-  !   - particle release location ID
-  !   - particle release time (retrieved from partlist)
+  !   - todo imdl: originating model ID
+  !   - iprp: originating PRP ID
+  !   - irpt: particle release location ID
+  !   - trelease: particle release time (retrieved from partlist)
   type :: TrackDataType
     ! integer arrays
     integer(I4B), pointer :: nrows => null() ! total count of track data
     integer(I4B), dimension(:), pointer, contiguous :: kper ! stress period
     integer(I4B), dimension(:), pointer, contiguous :: kstp ! time step
     integer(I4B), dimension(:), pointer, contiguous :: irpt ! particle ID
-    integer(I4B), dimension(:), pointer, contiguous :: iprp ! PRP ID
+    integer(I4B), dimension(:), pointer, contiguous :: iprp ! originating PRP ID
     integer(I4B), dimension(:), pointer, contiguous :: icell ! cell ID
     integer(I4B), dimension(:), pointer, contiguous :: izone ! todo zone number
     integer(I4B), dimension(:), pointer, contiguous :: istatus ! particle status
     integer(I4B), dimension(:), pointer, contiguous :: ireason ! reason for datum
     ! ireason can take values:
     !   0: release
-    !   1: cross cell boundary
-    !   2: time step selected (not implemented yet)
+    !   1: cross cell boundary (or subcell? or generic feature? worth distinguishing?)
+    !   2: todo time series
     !   3: termination
-    !   4: inactive?
 
     ! double arrays
     real(DP), dimension(:), pointer, contiguous :: trelease ! particle's release time
@@ -83,7 +83,7 @@ contains
     if (present(itrack2)) then
       itrackmax = itrack2
     else
-      itrackmax = size(this%kper)
+      itrackmax = this%nrows
     end if
 
     ! -- write rows to file

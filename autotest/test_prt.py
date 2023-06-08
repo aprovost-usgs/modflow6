@@ -198,8 +198,8 @@ def test_fmi_basic(function_tmpdir, targets):
             prt,
             pname="oc",
             budget_filerecord=[prt_budget_file],
-            # track_filerecord=[prt_track_file],
-            # trackcsv_filerecord=[prt_track_csv_file],
+            track_filerecord=[prt_track_file],
+            trackcsv_filerecord=[prt_track_csv_file],
             saverecord=[("BUDGET", "ALL")],
         )
         gwf_budget_file = f"{name}.bud"
@@ -356,6 +356,8 @@ class PrtCases:
             prt,
             pname="oc",
             budget_filerecord=[f"{ctx.name}.cbb"],
+            track_filerecord=[f"{ctx.name}.trk"],
+            trackcsv_filerecord=[f"{ctx.name}.trk.csv"],
             saverecord=[("BUDGET", "ALL")],
         )
 
@@ -525,6 +527,8 @@ class PrtCases:
             prt,
             pname="oc",
             budget_filerecord=[f"{prtname}.cbb"],
+            track_filerecord=[f"{prtname}.trk"],
+            trackcsv_filerecord=[f"{prtname}.trk.csv"],
             saverecord=[("BUDGET", "ALL")],
         )
 
@@ -821,10 +825,14 @@ class PrtCases:
 
         # Instantiate the MODFLOW 6 prt output control package
         budget_record = [budgetfile_prt]
+        track_record = [f"{nm_prt}.trk"]
+        trackcsv_record = [f"{nm_prt}.trk.csv"]
         flopy.mf6.ModflowPrtoc(
             prt,
             pname="oc",
             budget_filerecord=budget_record,
+            track_filerecord=track_record,
+            trackcsv_filerecord=trackcsv_record,
             saverecord=[("BUDGET", "ALL")],
         )
 

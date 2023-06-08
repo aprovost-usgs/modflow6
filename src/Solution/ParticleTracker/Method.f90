@@ -14,7 +14,6 @@ module MethodModule
     character(len=40), pointer, public :: trackingDomainType ! character string that names the tracking domain type
     logical, public :: delegatesTracking
     type(TrackDataType), pointer :: trackdata
-    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number
   contains
     ! -- Implemented in all tracking methods
     procedure(apply), deferred :: apply ! applies the method

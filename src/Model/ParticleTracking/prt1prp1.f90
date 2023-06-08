@@ -846,7 +846,7 @@ contains
         write (this%iout, fmttrkbin) trim(adjustl(fname)), this%itrkout
         ! open and write ascii header spec file
         this%itrkhdr = getunit()
-        fname = trim(fname)//'.trk.hdr'
+        fname = trim(fname)//'.hdr'
         call openfile(this%itrkhdr, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%itrkhdr, '(a,/,a)') TRACKHEADERS, TRACKTYPES
@@ -1147,24 +1147,21 @@ contains
   end subroutine prp_read_dimensions
 
   !> @brief Save particle track data to an output file
-  subroutine prp_ot_trk(this, itrksave)
+  subroutine prp_ot_trk(this)
     ! -- dummy variables
     class(PrtPrpType), intent(inout) :: this
-    integer(I4B), intent(in) :: itrksave
     !
     ! -- write particle track data to binary output file
-    if (this%itrkout /= 0 .and. itrksave /= 0) then
+    if (this%itrkout /= 0) &
       call this%trackdata%save_track_data(this%itrkout, csv=.false., &
                                           itrack1=this%itrack1 + 1, &
                                           itrack2=this%itrack2)
-    end if
     !
     ! -- write particle track data to CSV output file
-    if (this%itrkcsv /= 0 .and. itrksave /= 0) then
+    if (this%itrkcsv /= 0) &
       call this%trackdata%save_track_data(this%itrkcsv, csv=.true., &
                                           itrack1=this%itrack1 + 1, &
                                           itrack2=this%itrack2)
-    end if
     !
     return
   end subroutine prp_ot_trk

@@ -71,24 +71,11 @@ module PrtModule
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: nprp => null() ! number of PRP packages in the model
-
-    ! array of indices into trackdata at which each PRP begins, e.g.
-    !   - itrack(1) = 0 for the 1st PRP
-    !   - itrack(2) indexes 1st datum from the 2nd PRP
-    !   - etc
     integer(I4B), dimension(:), pointer, contiguous :: itrack
-
-    ! structure of arrays to store particle track data (includes all PRPs together)
     type(TrackDataType), pointer :: trackdata ! kluge?
-
     real(DP), dimension(:), pointer, contiguous :: masssto => null() !< particle mass storage in cells, new value
     real(DP), dimension(:), pointer, contiguous :: massstoold => null() !< particle mass storage in cells, old value
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< particle mass storage rate in cells
-
-    ! output files
-    integer(I4B), pointer :: itrkout => null()
-    integer(I4B), pointer :: itrkhdr => null()
-    integer(I4B), pointer :: itrkcsv => null()
 
   contains
 
@@ -115,7 +102,6 @@ module PrtModule
     procedure, private :: prt_ot_saveflow
     procedure, private :: prt_ot_printflow
     procedure, private :: prt_ot_dv
-    procedure, private :: prt_ot_trk
     procedure, private :: prt_ot_bdsummary
     procedure, private :: prt_ot_obs
     procedure, private :: prt_cq_sto
@@ -773,7 +759,6 @@ contains
     ! -- local
     integer(I4B) :: idvsave
     integer(I4B) :: idvprint
-    integer(I4B) :: itrksave
     integer(I4B) :: icbcfl
     integer(I4B) :: icbcun
     integer(I4B) :: ibudfl
@@ -786,13 +771,10 @@ contains
     ! -- Set write and print flags
     idvsave = 0
     idvprint = 0
-    itrksave = 1 ! kluge hardcoded for now
     icbcfl = 0
     ibudfl = 0
     if (this%oc%oc_save('CONCENTRATION')) idvsave = 1
     if (this%oc%oc_print('CONCENTRATION')) idvprint = 1
-    ! todo uncomment if OutputControl updated to work with track data?
-    ! if (this%oc%oc_save('TRACK')) itrksave = 1
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     if (this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
@@ -810,9 +792,6 @@ contains
     !
     ! -- Save and print dependent variables
     call this%prt_ot_dv(idvsave, idvprint, ipflag)
-    !
-    ! -- Save particle tracks
-    call this%prt_ot_trk(itrksave)
     !
     ! -- Print budget summaries
     call this%prt_ot_bdsummary(ibudfl, ipflag)
@@ -1008,92 +987,29 @@ contains
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
 
-  end subroutine prt_ot_dv
-
-  !> @brief Save particle tracks
-  !>
-  subroutine prt_ot_trk(this, itrksave)
-    ! -- modules
-    use OpenSpecModule, only: access, form
-    use InputOutputModule, only: getunit, openfile, lowcase
-    use TrackDataModule, only: TRACKHEADERS, TRACKTYPES
-    ! -- dummy
-    class(PrtModelType) :: this
-    integer(I4B), intent(in) :: itrksave
-    ! -- local
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-    logical(LGP) :: opened
-    character(len=len(this%name)) :: name
-    ! -- formats
-    character(len=*), parameter :: fmttrkbin = &
-      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
-    &'OPENED ON UNIT: ', I0)"
-    character(len=*), parameter :: fmttrkcsv = &
-      "(4x, 'PARTICLE TRACKS WILL BE SAVED TO CSV FILE: ', a, /4x, &
-    &'OPENED ON UNIT: ', I0)"
-
-    ! save particle track data to binary file
-    if (this%itrkout /= 0) then
-      ! open binary output file
-      inquire (unit=this%itrkout, opened=opened)
-      if (.not. opened) then
-        this%itrkout = getunit()
-        name = this%name
-        call lowcase(name)
-        call openfile(this%itrkout, this%iout, trim(name)//'.trk', &
-                      'DATA(BINARY)', form, access, &
-                      filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmttrkbin) &
-          trim(adjustl(trim(this%name)//'.trk')), this%itrkout
-      end if
-
-      ! open/write ascii header file
-      inquire (unit=this%itrkhdr, opened=opened)
-      if (.not. opened) then
-        this%itrkhdr = getunit()
-        call openfile(this%itrkhdr, this%iout, trim(name)//'.trk.hdr', &
-                      'CSV', filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%itrkhdr, '(a,/,a)') &
-          TRACKHEADERS, &
-          TRACKTYPES
-      end if
-
+    ! -- save particle tracks for full model
+    if (this%oc%itrkout /= 0) &
       ! write track data to binary file
-      call this%trackdata%save_track_data(this%itrkout, csv=.false., &
+      call this%trackdata%save_track_data(this%oc%itrkout, csv=.false., &
                                           itrack1=1, &
                                           itrack2=this%trackdata%nrows)
-    end if
 
-    ! save particle track data to CSV file
-    if (this%itrkcsv /= 0) then
-      inquire (unit=this%itrkcsv, opened=opened)
-      if (.not. opened) then
-        name = this%name
-        call lowcase(name)
-        call openfile(this%itrkcsv, this%iout, trim(name)//'.trk.csv', &
-                      'CSV', filstat_opt='REPLACE')
-        write (this%iout, fmttrkcsv) &
-          trim(adjustl(trim(name)//'.trk.csv')), this%itrkcsv
-        write (this%itrkcsv, '(a)') TRACKHEADERS
-      end if
-
+    if (this%oc%itrkcsv /= 0) &
       ! write track data to CSV file
-      call this%trackdata%save_track_data(this%itrkcsv, csv=.true., &
+      call this%trackdata%save_track_data(this%oc%itrkcsv, csv=.true., &
                                           itrack1=1, &
                                           itrack2=this%trackdata%nrows)
-    end if
 
-    ! save particle track output files for each PRP individually
+    ! -- save particle tracks for each PRP
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       select type (packobj)
       type is (PrtPrpType)
-        call packobj%prp_ot_trk(itrksave)
+        call packobj%prp_ot_trk()
       end select
     end do
 
-  end subroutine prt_ot_trk
+  end subroutine prt_ot_dv
 
   !> @brief Print budget summary
   !<
@@ -1207,9 +1123,6 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%nprp)
     call mem_deallocate(this%trackdata%nrows)
-    call mem_deallocate(this%itrkout)
-    call mem_deallocate(this%itrkhdr)
-    call mem_deallocate(this%itrkcsv)
     !
     ! -- Arrays
     call mem_deallocate(this%masssto)
@@ -1285,9 +1198,6 @@ contains
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%nprp, 'NPRP', this%memoryPath) ! kluge?
     call mem_allocate(this%trackdata%nrows, 'NTRACKROWS', this%memoryPath) ! kluge?
-    call mem_allocate(this%itrkout, 'ITRKOUT', this%memoryPath)
-    call mem_allocate(this%itrkhdr, 'ITRKHDR', this%memoryPath)
-    call mem_allocate(this%itrkcsv, 'ITRKCSV', this%memoryPath)
     !
     ! this%inpin  = 0
     this%infmi = 0
@@ -1301,9 +1211,6 @@ contains
     this%inobs = 0
     this%nprp = 0
     this%trackdata%nrows = 0
-    this%itrkout = 1 ! kluge to enable output
-    this%itrkhdr = 1 ! "
-    this%itrkcsv = 1 ! "
     !
     ! -- return
     return
@@ -1615,7 +1522,7 @@ contains
             this%trackdata%iprp(ntrack) = iprp
             this%trackdata%irpt(ntrack) = particle%ipart
             this%trackdata%icell(ntrack) = ic
-            this%trackdata%izone(ntrack) = method%izone(ic)
+            this%trackdata%izone(ntrack) = 1
             this%trackdata%istatus(ntrack) = particle%istatus
             this%trackdata%ireason(ntrack) = 0 ! release
             this%trackdata%x(ntrack) = particle%x
