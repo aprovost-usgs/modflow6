@@ -210,7 +210,7 @@ contains
     class(ParticleType), intent(in) :: particle
     character(len=LENMEMPATH) :: id
     !
-    write (id, '(I0,"-",I0,"-",I0)') &
+    write (id, '(I0,"-",I0,"-",F0.0)') &
       particle%iprp, particle%irpt, particle%trelease
     !
     return

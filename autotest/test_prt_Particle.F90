@@ -16,7 +16,10 @@ module test_prt_particle
         type(ParticleType), pointer :: p
 
         call create_particle(p)
+        p%iprp = 0
+        p%irpt = 0
+        p%trelease = 0.0
         print *, "Particle ID: ", get_particle_id(p)
-        call check(error, get_particle_id(p) == "0-0-0")
+        call check(error, get_particle_id(p) == "0-0-0.")
     end subroutine test_get_particle_id
 end module test_prt_particle
