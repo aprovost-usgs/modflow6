@@ -478,6 +478,7 @@ contains
         this%partlist%ttrack(np) = trelease
         this%partlist%istopweaksink(np) = this%istopweaksink
         this%partlist%istopzone(np) = this%istopzone
+        this%partlist%izone = 1 ! particles start in zone 1 (active domain)
         this%partlist%istatus(np) = 1
         this%partlist%irpt(np) = nps
         this%partlist%iTrackingDomain(np, 0) = 0 ! kluge???

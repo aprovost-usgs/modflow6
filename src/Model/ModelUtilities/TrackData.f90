@@ -38,8 +38,8 @@ module TrackDataModule
     integer(I4B), dimension(:), pointer, contiguous :: ireason ! reason for datum
     ! ireason can take values:
     !   0: release
-    !   1: cross boundary (cell? subcell? or generic feature? worth distinguishing?)
-    !   2: todo time series
+    !   1: cross spatial boundary (cell? subcell? or generic feature? worth distinguishing?)
+    !   2: cross temporal boundary (time step end)
     !   3: termination
     !   4: inactive
 

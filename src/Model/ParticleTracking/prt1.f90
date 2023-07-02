@@ -1226,8 +1226,17 @@ contains
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
     !
-
-    ntrackmx = 1000000 ! kluge hardwire (todo dynamically resize)
+    ! -- Allocate two positions for each particle,
+    ! -- start and end of time step. The particles
+    ! -- may not move, but doubling the memory hit
+    ! -- in that case to twice the particle number
+    ! -- does not seem excessive, and it is likely
+    ! -- not a commonly encountered situation (why
+    ! -- simulate stationary particles). After the
+    ! -- initial allocation, reallocate as needed,
+    ! -- incrementing logarithmically as needed.
+    ! ntrackmx = size(this%partlist%irpt) * 2
+    ntrackmx = 1000000
 
     call mem_allocate(this%itrack, this%nprp + 1, &
                       'ITRACK', this%memorypath)
@@ -1446,36 +1455,18 @@ contains
         ! -- Loop over particles in package
         do np = 1, packobj%npart
           !
-          ! -- Skip particle if inactive
-          ! if (packobj%partlist%istatus(np).ne.1) cycle
-          ! -- If particle inactive, record (unchanged) location in track data
-          ! -- and skip tracking
+          ! -- If particle inactive, record (unchanged) location in track data and skip tracking
           ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
           if (packobj%partlist%istatus(np) .ne. 1 .and. save_inactive) then
-            call this%trackdata%add_track_data(particle, reason=3) ! reason=4 is inactive
+            call this%trackdata%add_track_data(particle, reason=4) ! reason=4 is inactive
             cycle
           end if
           !
+          ! -- Reset the particle's coordinate transformation
           call particle%reset_transf()
 
-          ! kluge note: make subroutine to set particle props?
-          particle%iprp = iprp
-          particle%irpt = np ! kluge note: necessary to reset this here?
-          particle%istopweaksink = packobj%partlist%istopweaksink(np)
-          particle%istopzone = packobj%partlist%istopzone(np)
-          particle%iTrackingDomain(levelMin:levelMax) = &
-            packobj%partlist%iTrackingDomain(np, levelMin:levelMax)
-          particle%iTrackingDomain(1) = this%id ! kluge note: set this elsewhere???
-          particle%iTrackingDomainBoundary(levelMin:levelMax) = &
-            packobj%partlist%iTrackingDomainBoundary(np, levelMin:levelMax)
-          particle%izone = 1 ! particles start in zone 1 (active domain)
-          particle%istatus = -1
-          particle%x = packobj%partlist%x(np)
-          particle%y = packobj%partlist%y(np)
-          particle%z = packobj%partlist%z(np)
-          particle%trelease = packobj%partlist%trelease(np)
-          particle%tstop = packobj%partlist%tstop(np)
-          particle%ttrack = packobj%partlist%ttrack(np)
+          ! -- Update particle properties from particle list
+          call particle%update_from_list(packobj%partlist, this%id, iprp, np)
 
           ! if (particle%iTrackingDomain(2).eq.0) then
           ! if (particle%iTrackingDomain(2).lt.0) then
@@ -1513,21 +1504,8 @@ contains
           ! -- Apply the tracking method
           call method%apply(particle, tmax)
           !
-          packobj%partlist%irpt(np) = particle%irpt ! kluge note: necessary to (re)set this here?
-          packobj%partlist%iTrackingDomain( &
-            np, &
-            levelMin:levelMax) = &
-            particle%iTrackingDomain(levelMin:levelMax)
-          packobj%partlist%iTrackingDomainBoundary( &
-            np, &
-            levelMin:levelMax) = &
-            particle%iTrackingDomainBoundary(levelMin:levelMax)
-          packobj%partlist%izone(np) = particle%izone
-          packobj%partlist%istatus(np) = particle%istatus
-          packobj%partlist%x(np) = particle%x ! kluge note: make subroutine to update particle in list???
-          packobj%partlist%y(np) = particle%y
-          packobj%partlist%z(np) = particle%z
-          packobj%partlist%ttrack(np) = particle%ttrack
+          ! -- Update particle in list
+          call packobj%partlist%update_from_particle(particle, np)
           !
         end do
       end select

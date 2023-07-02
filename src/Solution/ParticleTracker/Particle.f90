@@ -49,10 +49,11 @@ module ParticleModule
 
   contains
     procedure, public :: destroy => destroy_particle ! destructor for the particle
-    procedure, public :: set_transf
-    procedure, public :: reset_transf
-    procedure, public :: transf_coords
     procedure, public :: get_model_coords
+    procedure, public :: reset_transf
+    procedure, public :: set_transf
+    procedure, public :: transf_coords
+    procedure, public :: update_from_list
   end type ParticleType
 
   ! -- Define the particle list type (ParticleListType)  ! kluge note: use separate module???
@@ -81,6 +82,8 @@ module ParticleModule
     real(DP), allocatable, public :: tstop(:) ! particle stop time
     real(DP), allocatable, public :: ttrack(:) ! time to which particle has been tracked
 
+  contains
+    procedure, public :: update_from_particle
   end type ParticleListType
 
 contains
@@ -105,6 +108,59 @@ contains
     deallocate (this%iTrackingDomainBoundary)
     return
   end subroutine destroy_particle
+
+  subroutine update_from_list(this, partlist, im, iprp, irpt)
+    ! -- dummy
+    class(ParticleType), intent(inout) :: this
+    type(ParticleListType), intent(in) :: partlist
+    integer(I4B), intent(in) :: im ! model ID
+    integer(I4B), intent(in) :: iprp ! particle release package ID
+    integer(I4B), intent(in) :: irpt ! particle release point ID
+    !
+    this%iprp = iprp
+    this%irpt = irpt ! kluge note: necessary to reset this here?
+    this%istopweaksink = partlist%istopweaksink(irpt)
+    this%istopzone = partlist%istopzone(irpt)
+    this%iTrackingDomain(levelMin:levelMax) = &
+      partlist%iTrackingDomain(irpt, levelMin:levelMax)
+    this%iTrackingDomain(1) = im
+    this%iTrackingDomainBoundary(levelMin:levelMax) = &
+      partlist%iTrackingDomainBoundary(irpt, levelMin:levelMax)
+    this%istatus = -1 ! need to reset this to -1 every timestep (for solution to proceed)
+    this%x = partlist%x(irpt)
+    this%y = partlist%y(irpt)
+    this%z = partlist%z(irpt)
+    this%trelease = partlist%trelease(irpt)
+    this%tstop = partlist%tstop(irpt)
+    this%ttrack = partlist%ttrack(irpt)
+    !
+    return
+  end subroutine update_from_list
+
+  !> @brief Update particle list from particle
+  subroutine update_from_particle(this, particle, np)
+    ! -- dummy
+    class(ParticleListType), intent(inout) :: this
+    type(ParticleType), intent(in) :: particle
+    integer(I4B), intent(in) :: np
+    !
+    this%iTrackingDomain( &
+      np, &
+      levelMin:levelMax) = &
+      particle%iTrackingDomain(levelMin:levelMax)
+    this%iTrackingDomainBoundary( &
+      np, &
+      levelMin:levelMax) = &
+      particle%iTrackingDomainBoundary(levelMin:levelMax)
+    this%izone(np) = particle%izone
+    this%istatus(np) = particle%istatus
+    this%x(np) = particle%x
+    this%y(np) = particle%y
+    this%z(np) = particle%z
+    this%ttrack(np) = particle%ttrack
+    !
+    return
+  end subroutine update_from_particle
 
   !> @brief Directly set transformation from model coordinates
   !! to particle's local coordinates
