@@ -1234,7 +1234,7 @@ contains
     ! -- not a commonly encountered situation (why
     ! -- simulate stationary particles). After the
     ! -- initial allocation, reallocate as needed,
-    ! -- incrementing logarithmically as needed.
+    ! -- incrementing logarithmically??
     ! ntrackmx = size(this%partlist%irpt) * 2
     ntrackmx = 1000000
 

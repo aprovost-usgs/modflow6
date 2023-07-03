@@ -111,21 +111,25 @@ contains
     return
   end subroutine destroy_particle
 
-  subroutine allocate_arrays(this, np, lMin, lMax, mempath)
+  subroutine allocate_arrays(this, np, lmin, lmax, mempath)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(ParticleListType), intent(inout) :: this
     integer(I4B), intent(in) :: np ! number of particles
-    integer(I4B), intent(in) :: lMin ! minimum level in the tracking domain hierarchy
-    integer(I4B), intent(in) :: lMax ! maximum level in the tracking domain hierarchy
+    integer(I4B), intent(in) :: lmin ! minimum level in the tracking domain hierarchy
+    integer(I4B), intent(in) :: lmax ! maximum level in the tracking domain hierarchy
     character(*), intent(in) :: mempath ! path to memory
     !
     call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
     call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
-    call mem_allocate(this%iTrackingDomain, np, lMax - lmin, 'PLITD', mempath) ! kluge note: ditch crazy dims
-    call mem_allocate(this%iTrackingDomainBoundary, np, &
-                      lMax - lmin, 'PLITDB', mempath) ! kluge note: ditch crazy dims
+    ! -- kluge todo: update mem_allocate to allow custom range of indices?
+    !    e.g. here we want to allocate 0-4 for trackdomain levels, not 1-5
+    ! call mem_allocate(this%iTrackingDomain, np, lmax - lmin + 1, 'PLITD', mempath) ! kluge note: ditch crazy dims
+    ! call mem_allocate(this%iTrackingDomainBoundary, np, &
+    !                   lmax - lmin + 1, 'PLITDB', mempath) ! kluge note: ditch crazy dims
+    allocate (this%iTrackingDomain(np, lmin:lmax))
+    allocate (this%iTrackingDomainBoundary(np, lmin:lmax))
     call mem_allocate(this%izone, np, 'PLIZONE', mempath)
     call mem_allocate(this%istatus, np, 'PLISTATUS', mempath)
     call mem_allocate(this%x, np, 'PLX', mempath)
@@ -149,8 +153,10 @@ contains
     !
     call mem_deallocate(this%irpt, 'PLIRPT', mempath)
     call mem_deallocate(this%iprp, 'PLIPRP', mempath)
-    call mem_deallocate(this%iTrackingDomain, 'PLITD', mempath)
-    call mem_deallocate(this%iTrackingDomainBoundary, 'PLITDB', mempath)
+    ! call mem_deallocate(this%iTrackingDomain, 'PLITD', mempath)
+    ! call mem_deallocate(this%iTrackingDomainBoundary, 'PLITDB', mempath)
+    deallocate (this%iTrackingDomain)
+    deallocate (this%iTrackingDomainBoundary)
     call mem_deallocate(this%izone, 'PLIZONE', mempath)
     call mem_deallocate(this%istatus, 'PLISTATUS', mempath)
     call mem_deallocate(this%x, 'PLX', mempath)
