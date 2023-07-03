@@ -61,28 +61,30 @@ module ParticleModule
 
     ! provenance/metadata
     ! integer, public :: imodel ! index of model to which the particle currently belongs
-    integer(I4B), allocatable, public :: irpt(:) !< release point number
-    integer(I4B), allocatable, public :: iprp(:) ! particle release point number (index)
+    integer(I4B), dimension(:), pointer, contiguous :: irpt !< release point number
+    integer(I4B), dimension(:), pointer, contiguous :: iprp ! particle release point number (index)
 
     ! stopping criteria
-    integer(I4B), allocatable, public :: istopweaksink(:) !< weak sink option: 0 = do not stop, 1 = stop
-    integer(I4B), allocatable, public :: istopzone(:) !< stop zone number
+    integer(I4B), dimension(:), pointer, contiguous :: istopweaksink !< weak sink option: 0 = do not stop, 1 = stop
+    integer(I4B), dimension(:), pointer, contiguous :: istopzone !< stop zone number
 
     ! tracking domain
-    integer(I4B), allocatable, public :: iTrackingDomain(:, :) ! array of indices for domains in the tracking domain hierarchy
-    integer(I4B), allocatable, public :: iTrackingDomainBoundary(:, :) ! array of indices for tracking domain boundaries
+    integer(I4B), dimension(:, :), pointer, contiguous :: iTrackingDomain ! array of indices for domains in the tracking domain hierarchy
+    integer(I4B), dimension(:, :), pointer, contiguous :: iTrackingDomainBoundary ! array of indices for tracking domain boundaries
 
     ! track data
-    integer(I4B), allocatable, public :: izone(:) !< current zone number
-    integer(I4B), allocatable, public :: istatus(:) !< particle status
-    real(DP), allocatable, public :: x(:) ! model x coord of particle
-    real(DP), allocatable, public :: y(:) ! model y coord of particle
-    real(DP), allocatable, public :: z(:) ! model z coord of particle
-    real(DP), allocatable, public :: trelease(:) ! particle release time
-    real(DP), allocatable, public :: tstop(:) ! particle stop time
-    real(DP), allocatable, public :: ttrack(:) ! time to which particle has been tracked
+    integer(I4B), dimension(:), pointer, contiguous :: izone !< current zone number
+    integer(I4B), dimension(:), pointer, contiguous :: istatus !< particle status
+    real(DP), dimension(:), pointer, contiguous :: x ! model x coord of particle
+    real(DP), dimension(:), pointer, contiguous :: y ! model y coord of particle
+    real(DP), dimension(:), pointer, contiguous :: z ! model z coord of particle
+    real(DP), dimension(:), pointer, contiguous :: trelease ! particle release time
+    real(DP), dimension(:), pointer, contiguous :: tstop ! particle stop time
+    real(DP), dimension(:), pointer, contiguous :: ttrack ! time to which particle has been tracked
 
   contains
+    procedure, public :: allocate_arrays
+    procedure, public :: deallocate_arrays
     procedure, public :: update_from_particle
   end type ParticleListType
 
@@ -108,6 +110,60 @@ contains
     deallocate (this%iTrackingDomainBoundary)
     return
   end subroutine destroy_particle
+
+  subroutine allocate_arrays(this, np, lMin, lMax, mempath)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(ParticleListType), intent(inout) :: this
+    integer(I4B), intent(in) :: np ! number of particles
+    integer(I4B), intent(in) :: lMin ! minimum level in the tracking domain hierarchy
+    integer(I4B), intent(in) :: lMax ! maximum level in the tracking domain hierarchy
+    character(*), intent(in) :: mempath ! path to memory
+    !
+    call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
+    call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
+    call mem_allocate(this%iTrackingDomain, np, lMax - lmin, 'PLITD', mempath) ! kluge note: ditch crazy dims
+    call mem_allocate(this%iTrackingDomainBoundary, np, &
+                      lMax - lmin, 'PLITDB', mempath) ! kluge note: ditch crazy dims
+    call mem_allocate(this%izone, np, 'PLIZONE', mempath)
+    call mem_allocate(this%istatus, np, 'PLISTATUS', mempath)
+    call mem_allocate(this%x, np, 'PLX', mempath)
+    call mem_allocate(this%y, np, 'PLY', mempath)
+    call mem_allocate(this%z, np, 'PLZ', mempath)
+    call mem_allocate(this%trelease, np, 'PLTRELEASE', mempath)
+    call mem_allocate(this%tstop, np, 'PLTSTOP', mempath)
+    call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
+    call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
+    call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
+    !
+    return
+  end subroutine allocate_arrays
+
+  subroutine deallocate_arrays(this, mempath)
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(ParticleListType), intent(inout) :: this
+    character(*), intent(in) :: mempath ! path to memory
+    !
+    call mem_deallocate(this%irpt, 'PLIRPT', mempath)
+    call mem_deallocate(this%iprp, 'PLIPRP', mempath)
+    call mem_deallocate(this%iTrackingDomain, 'PLITD', mempath)
+    call mem_deallocate(this%iTrackingDomainBoundary, 'PLITDB', mempath)
+    call mem_deallocate(this%izone, 'PLIZONE', mempath)
+    call mem_deallocate(this%istatus, 'PLISTATUS', mempath)
+    call mem_deallocate(this%x, 'PLX', mempath)
+    call mem_deallocate(this%y, 'PLY', mempath)
+    call mem_deallocate(this%z, 'PLZ', mempath)
+    call mem_deallocate(this%trelease, 'PLTRELEASE', mempath)
+    call mem_deallocate(this%tstop, 'PLTSTOP', mempath)
+    call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
+    call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
+    call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
+    !
+    return
+  end subroutine deallocate_arrays
 
   subroutine update_from_list(this, partlist, im, iprp, irpt)
     ! -- dummy
