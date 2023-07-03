@@ -70,6 +70,8 @@ contains
     integer(I4B), intent(in) :: nt
     character(len=*), intent(in) :: mempath
     !
+    allocate (character(len=len(mempath)) :: this%mempath)
+    ! call mem_allocate(this%mempath, size(mempath), 'TRACKMEMPATH', mempath)
     this%mempath = mempath ! kluge!!!
     ! call mem_setptr(mempath, 'TRACKMEMPATH', mempath)
     call mem_allocate(this%kper, nt, 'TRACKKPER', mempath)
@@ -172,11 +174,11 @@ contains
       if ((ntracksize - this%ntrack) < 2) then
         print *, 'Expanding track arrays'
         call this%reallocate_arrays(ntracksize * 10, this%mempath)
-      endif
+      end if
       if ((ntracksize - this%ntrack) > (this%ntrack * 10)) then
         print *, 'Shrinking track arrays'
         call this%reallocate_arrays(ntracksize / 10, this%mempath)
-      endif
+      end if
       ! -- Get model coordinates
       call particle%get_model_coords(xmodel, ymodel, zmodel)
       ! -- Add track data

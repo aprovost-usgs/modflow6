@@ -1208,22 +1208,26 @@ contains
     ! use ConstantsModule, only: DZERO
     use MemoryManagerModule, only: mem_allocate
     class(PrtModelType) :: this
-    integer(I4B) :: n
-    integer(I4B) :: ntrackmx
+    integer(I4B) :: n, ip, ntrackmx, npart
+    class(BndType), pointer :: packobj
     !
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
     !
-    ! -- Allocate two positions for each particle,
-    ! -- start and end of time step. The particles
-    ! -- may not move, but doubling the memory hit
-    ! -- in that case to twice the particle number
-    ! -- does not seem excessive, and it is likely
-    ! -- not a commonly encountered situation (why
-    ! -- simulate stationary particles). After the
-    ! -- initial allocation, reallocate as needed,
-    ! -- incrementing logarithmically??
-    ntrackmx = size(this%partlist%irpt) * 2
+    ! -- count particles in all PRPs
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      select type (packobj)
+      type is (PrtPrpType) ! kluge
+        npart = npart + packobj%partlist%count()
+      end select
+    end do
+    !
+    ! -- Allocate two positions for each particle
+    ! -- to begin with, start & end of time step.
+    ! -- This wastes a slot for any particle that
+    ! -- doesn't move. Oh well.
+    ntrackmx = npart * 2
     ! ntrackmx = 1000000
     call mem_allocate(this%itrack, this%nprp + 1, &
                       'ITRACK', this%memorypath)
