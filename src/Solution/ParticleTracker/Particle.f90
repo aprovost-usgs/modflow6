@@ -69,8 +69,8 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, contiguous :: istopzone !< stop zone number
 
     ! tracking domain
-    integer(I4B), dimension(:, :), pointer, contiguous :: iTrackingDomain ! array of indices for domains in the tracking domain hierarchy
-    integer(I4B), dimension(:, :), pointer, contiguous :: iTrackingDomainBoundary ! array of indices for tracking domain boundaries
+    integer(I4B), dimension(:, :), allocatable :: iTrackingDomain ! array of indices for domains in the tracking domain hierarchy
+    integer(I4B), dimension(:, :), allocatable :: iTrackingDomainBoundary ! array of indices for tracking domain boundaries
 
     ! track data
     integer(I4B), dimension(:), pointer, contiguous :: izone !< current zone number
@@ -85,6 +85,7 @@ module ParticleModule
   contains
     procedure, public :: allocate_arrays
     procedure, public :: deallocate_arrays
+    procedure, public :: reallocate_arrays
     procedure, public :: update_from_particle
   end type ParticleListType
 
@@ -170,6 +171,42 @@ contains
     !
     return
   end subroutine deallocate_arrays
+
+  subroutine reallocate_arrays(this, np, mempath)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    use ArrayHandlersModule, only: ExpandArray2D
+    ! -- dummy
+    class(ParticleListType), intent(inout) :: this
+    integer(I4B), intent(in) :: np ! number of particles
+    character(*), intent(in) :: mempath ! path to memory
+    !
+    ! resize 1D arrays
+    call mem_reallocate(this%irpt, np, 'PLIRPT', mempath)
+    call mem_reallocate(this%iprp, np, 'PLIPRP', mempath)
+    call mem_reallocate(this%izone, np, 'PLIZONE', mempath)
+    call mem_reallocate(this%istatus, np, 'PLISTATUS', mempath)
+    call mem_reallocate(this%x, np, 'PLX', mempath)
+    call mem_reallocate(this%y, np, 'PLY', mempath)
+    call mem_reallocate(this%z, np, 'PLZ', mempath)
+    call mem_reallocate(this%trelease, np, 'PLTRELEASE', mempath)
+    call mem_reallocate(this%tstop, np, 'PLTSTOP', mempath)
+    call mem_reallocate(this%ttrack, np, 'PLTTRACK', mempath)
+    call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
+    call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
+    !
+    ! resize first dimension of 2D arrays
+    call ExpandArray2D( &
+      this%iTrackingDomain, &
+      size(this%iTrackingDomain(:, 1) - np), &
+      0)
+    call ExpandArray2D( &
+      this%iTrackingDomainBoundary, &
+      size(this%iTrackingDomainBoundary(:, 1) - np), &
+      0)
+    !
+    return
+  end subroutine reallocate_arrays
 
   subroutine update_from_list(this, partlist, im, iprp, irpt)
     ! -- dummy

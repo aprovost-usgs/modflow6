@@ -420,6 +420,13 @@ contains
     !
     ! -- Do the release, if there is one
     if (isRelease) then
+
+      ! resize particle arrays if needed
+      if ((this%npart + this%nreleasepts) > this%npartmax) then
+        this%npartmax = this%npartmax + this%nreleasepts
+        call this%partlist%reallocate_arrays(this%npartmax, this%memoryPath)
+      end if
+
       do nps = 1, this%nreleasepts
         ic = this%noder(nps) ! reduced node number (cell ID)
         ! -- If drape option activated, release particle in highest active
