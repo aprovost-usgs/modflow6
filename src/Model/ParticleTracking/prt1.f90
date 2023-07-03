@@ -1396,7 +1396,7 @@ contains
     ! -- dummy variables
     class(PrtModelType) :: this
     ! -- local variables
-    integer(I4B) :: np, ip, ntracksize
+    integer(I4B) :: np, ip
     class(BndType), pointer :: packobj
     type(ParticleType), pointer :: particle
     class(MethodType), pointer :: method
