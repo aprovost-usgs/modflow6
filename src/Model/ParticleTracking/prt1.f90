@@ -1129,19 +1129,7 @@ contains
     call mem_deallocate(this%massstoold)
     call mem_deallocate(this%ratesto)
     call mem_deallocate(this%itrack)
-    call mem_deallocate(this%trackdata%kper)
-    call mem_deallocate(this%trackdata%kstp)
-    call mem_deallocate(this%trackdata%iprp)
-    call mem_deallocate(this%trackdata%irpt)
-    call mem_deallocate(this%trackdata%icell)
-    call mem_deallocate(this%trackdata%izone)
-    call mem_deallocate(this%trackdata%istatus)
-    call mem_deallocate(this%trackdata%ireason)
-    call mem_deallocate(this%trackdata%trelease)
-    call mem_deallocate(this%trackdata%t)
-    call mem_deallocate(this%trackdata%x)
-    call mem_deallocate(this%trackdata%y)
-    call mem_deallocate(this%trackdata%z)
+    call this%trackdata%deallocate_arrays(this%memoryPath)
     !
     ! -- Track data object
     deallocate (this%trackdata)
@@ -1235,38 +1223,13 @@ contains
     ! -- simulate stationary particles). After the
     ! -- initial allocation, reallocate as needed,
     ! -- incrementing logarithmically??
-    ! ntrackmx = size(this%partlist%irpt) * 2
-    ntrackmx = 1000000
-
+    ntrackmx = size(this%partlist%irpt) * 2
+    ! ntrackmx = 1000000
     call mem_allocate(this%itrack, this%nprp + 1, &
                       'ITRACK', this%memorypath)
-    call mem_allocate(this%trackdata%kper, ntrackmx, &
-                      'TRACKKPER', this%memorypath)
-    call mem_allocate(this%trackdata%kstp, ntrackmx, &
-                      'TRACKKSTP', this%memorypath)
-    call mem_allocate(this%trackdata%iprp, ntrackmx, &
-                      'TRACKIPRP', this%memorypath)
-    call mem_allocate(this%trackdata%irpt, ntrackmx, &
-                      'TRACKIRPT', this%memorypath)
-    call mem_allocate(this%trackdata%icell, ntrackmx, &
-                      'TRACKICELL', this%memorypath)
-    call mem_allocate(this%trackdata%izone, ntrackmx, &
-                      'TRACKIZONE', this%memorypath)
-    call mem_allocate(this%trackdata%istatus, ntrackmx, &
-                      'TRACKISTATUS', this%memorypath)
-    call mem_allocate(this%trackdata%ireason, ntrackmx, &
-                      'TRACKIREASON', this%memorypath)
-    call mem_allocate(this%trackdata%trelease, ntrackmx, &
-                      'TRACKTRELEASE', this%memorypath)
-    call mem_allocate(this%trackdata%t, ntrackmx, &
-                      'TRACKT', this%memorypath)
-    call mem_allocate(this%trackdata%x, ntrackmx, &
-                      'TRACKX', this%memorypath)
-    call mem_allocate(this%trackdata%y, ntrackmx, &
-                      'TRACKY', this%memorypath)
-    call mem_allocate(this%trackdata%z, ntrackmx, &
-                      'TRACKZ', this%memorypath)
+    call this%trackdata%allocate_arrays(ntrackmx, this%memoryPath)
     !
+    ! -- allocate arrays for storage
     call mem_allocate(this%masssto, this%dis%nodes, &
                       'MASSSTO', this%memoryPath)
     call mem_allocate(this%massstoold, this%dis%nodes, &
@@ -1429,7 +1392,7 @@ contains
     ! -- dummy variables
     class(PrtModelType) :: this
     ! -- local variables
-    integer(I4B) :: np, ip
+    integer(I4B) :: np, ip, ntracksize
     class(BndType), pointer :: packobj
     type(ParticleType), pointer :: particle
     class(MethodType), pointer :: method
@@ -1454,6 +1417,15 @@ contains
         !
         ! -- Loop over particles in package
         do np = 1, packobj%npart
+          !
+          ! -- Expand track arrays if needed, shrink if possible.
+          ! -- Expand if we are at capacity. Shrink if less than
+          ! -- 10% capacity is in use.
+          ! ntracksize = size(this%trackdata%irpt)
+          ! if ((ntracksize - this%trackdata%ntrack) < 2) &
+          !   call this%trackdata%reallocate_arrays(ntracksize * 10, this%memoryPath)
+          ! if ((ntracksize - this%trackdata%ntrack) > (this%trackdata%ntrack * 10)) &
+          !   call this%trackdata%reallocate_arrays(ntracksize / 10, this%memoryPath)
           !
           ! -- If particle inactive, record (unchanged) location in track data and skip tracking
           ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
