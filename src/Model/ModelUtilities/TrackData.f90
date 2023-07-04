@@ -10,6 +10,8 @@ module TrackDataModule
   private
   public :: TrackDataType
 
+  integer(I4B), parameter, public :: INITIAL_TRACK_SIZE = 1000
+
   character(len=*), parameter, public :: TRACKHEADERS = &
                 'kper,kstp,iprp,irpt,icell,izone,istatus,ireason,&
                 &trelease,t,x,y,z'
@@ -70,6 +72,7 @@ contains
     integer(I4B), intent(in) :: nt
     character(len=*), intent(in) :: mempath
     !
+    print *, 'allocating ', nt, ' slots for track data arrays'
     allocate (character(len=len(mempath)) :: this%mempath)
     ! call mem_allocate(this%mempath, size(mempath), 'TRACKMEMPATH', mempath)
     this%mempath = mempath ! kluge!!!
@@ -152,6 +155,8 @@ contains
     integer(I4B), intent(in), optional :: level
     ! -- local
     integer(I4B) :: ntrack, ntracksize
+    integer(I4B) :: resizefactor, resizethresh
+    real(DP) :: resizefraction
     logical(LGP) :: ladd
     real(DP) :: xmodel, ymodel, zmodel
     !
@@ -167,20 +172,21 @@ contains
     end if
     !
     if (ladd) then
-      ! -- Expand track arrays if needed, shrink if possible.
-      ! -- Expand if we are at capacity. Shrink if less than
-      ! -- 10% capacity is in use.
+      !
+      ! -- Expand track arrays by factor of 10 if at capacity.
+      resizefactor = 10
+      resizethresh = 100
+      resizefraction = 0.01
       ntracksize = size(this%irpt)
-      if ((ntracksize - this%ntrack) < 2) then
-        print *, 'Expanding track arrays'
-        call this%reallocate_arrays(ntracksize * 10, this%mempath)
+      if ((ntracksize - this%ntrack) < 1) then
+        print *, 'Expanding track arrays from ', ntracksize, &
+          ' to ', ntracksize * resizefactor
+        call this%reallocate_arrays(ntracksize * resizefactor, this%mempath)
       end if
-      if ((ntracksize - this%ntrack) > (this%ntrack * 10)) then
-        print *, 'Shrinking track arrays'
-        call this%reallocate_arrays(ntracksize / 10, this%mempath)
-      end if
+      !
       ! -- Get model coordinates
       call particle%get_model_coords(xmodel, ymodel, zmodel)
+      !
       ! -- Add track data
       ntrack = this%ntrack + 1
       this%ntrack = ntrack

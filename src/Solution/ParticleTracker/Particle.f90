@@ -83,7 +83,7 @@ module ParticleModule
     real(DP), dimension(:), pointer, contiguous :: ttrack ! time to which particle has been tracked
 
   contains
-    procedure, public :: count
+    procedure, public :: Count
     procedure, public :: allocate_arrays
     procedure, public :: deallocate_arrays
     procedure, public :: reallocate_arrays
@@ -92,9 +92,9 @@ module ParticleModule
 
 contains
 
-  pure integer function count(this)
+  pure integer(I4B) function Count(this) result(c)
     class(ParticleListType), intent(in) :: this
-    count = size(this%irpt)
+    c = size(this%irpt)
   end function
 
   !> @brief Create a new particle

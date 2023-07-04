@@ -30,7 +30,7 @@ module PrtModule
   use ParticleModule ! kluge
   use MethodModule
   use GlobalDataModule
-  use TrackDataModule, only: TrackDataType ! kluge?
+  use TrackDataModule, only: TrackDataType, INITIAL_TRACK_SIZE ! kluge?
   use SimModule, only: count_errors, store_error, store_error_filename
 
   implicit none
@@ -1214,34 +1214,25 @@ contains
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
     !
-    ! -- count particles in all PRPs
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      select type (packobj)
-      type is (PrtPrpType) ! kluge
-        npart = npart + packobj%partlist%count()
-      end select
-    end do
-    !
-    ! -- Allocate two positions for each particle
-    ! -- to begin with, start & end of time step.
-    ! -- This wastes a slot for any particle that
-    ! -- doesn't move. Oh well.
-    ntrackmx = npart * 2
-    ! ntrackmx = 1000000
+    ! -- allocate track index
     call mem_allocate(this%itrack, this%nprp + 1, &
-                      'ITRACK', this%memorypath)
+                      'ITRACK', this%memoryPath)
+    !
+    ! -- Allocate some initial breathing room for track data.
+    ! -- Depending how many particles the model has, and how
+    ! -- quickly they move, this may be a huge underestimate,
+    ! -- but we expand by a factor of 10 each time we run out
+    ! -- of space, so resizing should be needed infrequently.
+    ntrackmx = INITIAL_TRACK_SIZE
     call this%trackdata%allocate_arrays(ntrackmx, this%memoryPath)
     !
-    ! -- allocate arrays for storage
+    ! -- allocate and initialize arrays for mass storage
     call mem_allocate(this%masssto, this%dis%nodes, &
                       'MASSSTO', this%memoryPath)
     call mem_allocate(this%massstoold, this%dis%nodes, &
                       'MASSSTOOLD', this%memoryPath)
     call mem_allocate(this%ratesto, this%dis%nodes, &
                       'RATESTO', this%memoryPath)
-    !
-    ! -- initialize
     do n = 1, this%dis%nodes
       this%masssto(n) = DZERO
       this%massstoold(n) = DZERO
@@ -1396,7 +1387,7 @@ contains
     ! -- dummy variables
     class(PrtModelType) :: this
     ! -- local variables
-    integer(I4B) :: np, ip
+    integer(I4B) :: np, ip, npart
     class(BndType), pointer :: packobj
     type(ParticleType), pointer :: particle
     class(MethodType), pointer :: method
@@ -1404,10 +1395,31 @@ contains
     logical(LGP) :: limited
     integer(I4B) :: iprp
     logical(LGP) :: save_inactive = .false.
+    integer(I4B) :: ntracksize, resizefactor, resizethresh, shrinksize
+    real(DP) :: resizefraction
     !
     call create_particle(particle) ! kluge note: elsewhere???
     !
     call this%trackdata%reset_track_data()
+    !
+    ! -- Shrink track arrays by a factor of resizefactor
+    ! -- if less than (resizefraction * 100)% is in use.
+    ! -- Never shrink below the intial trackdata size
+    ! -- purpose of resizethresh is to prevent shrinking
+    ! -- when the track array size is small. Also, never
+    ! -- shrink below minimum size (particle count) * 2.
+    resizefactor = 10
+    resizethresh = INITIAL_TRACK_SIZE
+    resizefraction = 0.01
+    ntracksize = size(this%trackdata%irpt)
+    if (this%trackdata%ntrack < (ntracksize * resizefraction) .and. &
+        ntracksize > resizethresh) then
+      shrinksize = ntracksize / resizefactor
+      if (shrinksize < resizethresh) shrinksize = resizethresh
+      print *, 'Shrinking track arrays from ', ntracksize, &
+        ' to ', shrinksize
+      call this%trackdata%reallocate_arrays(shrinksize, this%memoryPath)
+    end if
     !
     ! -- Loop over PRP packages
     iprp = 0
@@ -1421,15 +1433,6 @@ contains
         !
         ! -- Loop over particles in package
         do np = 1, packobj%npart
-          !
-          ! -- Expand track arrays if needed, shrink if possible.
-          ! -- Expand if we are at capacity. Shrink if less than
-          ! -- 10% capacity is in use.
-          ! ntracksize = size(this%trackdata%irpt)
-          ! if ((ntracksize - this%trackdata%ntrack) < 2) &
-          !   call this%trackdata%reallocate_arrays(ntracksize * 10, this%memoryPath)
-          ! if ((ntracksize - this%trackdata%ntrack) > (this%trackdata%ntrack * 10)) &
-          !   call this%trackdata%reallocate_arrays(ntracksize / 10, this%memoryPath)
           !
           ! -- If particle inactive, record (unchanged) location in track data and skip tracking
           ! kluge note: temporarily commented out recording of inactive particle data; want it, maybe as an option???
