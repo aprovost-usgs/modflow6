@@ -1208,8 +1208,7 @@ contains
     ! use ConstantsModule, only: DZERO
     use MemoryManagerModule, only: mem_allocate
     class(PrtModelType) :: this
-    integer(I4B) :: n, ip, ntrackmx, npart
-    class(BndType), pointer :: packobj
+    integer(I4B) :: n, ntrackmx
     !
     ! -- Allocate arrays in TrackingModelType
     call this%TrackingModelType%allocate_arrays()
@@ -1387,7 +1386,7 @@ contains
     ! -- dummy variables
     class(PrtModelType) :: this
     ! -- local variables
-    integer(I4B) :: np, ip, npart
+    integer(I4B) :: np, ip
     class(BndType), pointer :: packobj
     type(ParticleType), pointer :: particle
     class(MethodType), pointer :: method
@@ -1416,8 +1415,8 @@ contains
         ntracksize > resizethresh) then
       shrinksize = ntracksize / resizefactor
       if (shrinksize < resizethresh) shrinksize = resizethresh
-      print *, 'Shrinking track arrays from ', ntracksize, &
-        ' to ', shrinksize
+      ! print *, 'Shrinking track arrays from ', ntracksize, &
+      !   ' to ', shrinksize
       call this%trackdata%reallocate_arrays(shrinksize, this%memoryPath)
     end if
     !

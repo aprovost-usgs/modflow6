@@ -179,8 +179,8 @@ contains
       resizefraction = 0.01
       ntracksize = size(this%irpt)
       if ((ntracksize - this%ntrack) < 1) then
-        print *, 'Expanding track arrays from ', ntracksize, &
-          ' to ', ntracksize * resizefactor
+        ! print *, 'Expanding track arrays from ', ntracksize, &
+        !   ' to ', ntracksize * resizefactor
         call this%reallocate_arrays(ntracksize * resizefactor, this%mempath)
       end if
       !
