@@ -4,6 +4,7 @@ tests = [
   'Sim',
   'InputOutput',
   'GenericUtils',
+  'ArrayHandlers',
   'prt_UtilMisc',
   'prt_CellUtil',
   'prt_MethodSubcellPollock',
