@@ -160,11 +160,14 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_mGDv(this, particle)
+    ! -- modules
+    use InputOutputModule, only: get_jk
+    use GwfDisvModule, only: GwfDisvType
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     ! -- local
-    integer :: inface, ipos, ic, inbr, idiag
+    integer :: inface, ipos, ic, icu, inbr, idiag, icpl, ilay
     double precision :: z
     !
     inface = particle%iTrackingDomainBoundary(2)
@@ -184,6 +187,16 @@ contains
       ipos = idiag + inbr
       ic = this%fmi%dis%con%ja(ipos) ! kluge note: use PRT model's DIS instead of fmi's??
       particle%iTrackingDomain(2) = ic
+
+      ! compute and set user node number and layer on particle
+      select type (dis => this%fmi%dis)
+      type is (GwfDisvType)
+        icu = dis%get_nodeuser(ic)
+        call get_jk(ic, dis%ncpl, dis%nlay, icpl, ilay)
+        particle%icu = icu
+        particle%ilay = ilay
+      end select
+
       call this%mapToNbrCell(this%cellPoly%cellDefn, inface, z)
       particle%iTrackingDomainBoundary(2) = inface
       particle%iTrackingDomain(3:) = 0

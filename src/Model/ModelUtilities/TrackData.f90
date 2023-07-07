@@ -230,7 +230,7 @@ contains
       this%irpt(itrack) = particle%irpt
       this%iprp(itrack) = particle%iprp
       this%ilay(itrack) = particle%ilay
-      this%icell(itrack) = particle%iTrackingDomain(2)
+      this%icell(itrack) = particle%icu
       this%izone(itrack) = particle%izone
       if (particle%istatus .lt. 0) then
         this%istatus(itrack) = 1

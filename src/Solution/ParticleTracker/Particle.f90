@@ -266,6 +266,8 @@ contains
       np, &
       levelMin:levelMax) = &
       particle%iTrackingDomainBoundary(levelMin:levelMax)
+    this%icu(np) = particle%icu
+    this%ilay(np) = particle%ilay
     this%izone(np) = particle%izone
     this%istatus(np) = particle%istatus
     this%x(np) = particle%x
