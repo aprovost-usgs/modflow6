@@ -232,7 +232,11 @@ contains
       this%ilay(itrack) = particle%ilay
       this%icell(itrack) = particle%iTrackingDomain(2)
       this%izone(itrack) = particle%izone
-      this%istatus(itrack) = particle%istatus
+      if (particle%istatus .lt. 0) then
+        this%istatus(itrack) = 1
+      else
+        this%istatus(itrack) = particle%istatus
+      end if
       this%ireason(itrack) = reason
       this%trelease(itrack) = particle%trelease
       this%t(itrack) = particle%ttrack
@@ -260,8 +264,6 @@ contains
   !! Arguments itrack1 and itrack2 may be provided to select a subset of
   !! track data to write to file. This can be used to write data for one
   !! or multiple contiguous PRPs, instead of all particles in the model.
-  !!
-  !<
   subroutine save_track_data(this, itrkun, csv, itrack1, itrack2)
     ! -- dummy
     class(TrackDataType), intent(inout) :: this

@@ -469,14 +469,19 @@ def test_prt_fmi01(function_tmpdir, targets):
     pmv.plot_vector(qx, qy, normalize=True, color="white")
     csvdata = pd.read_csv(ws / prt_track_csv_file)
     plines = csvdata.groupby(["iprp", "irpt", "trelease"])
+    ax = plt.gca()
+
+    # plot color-coded pathlines
     for ipl, (pl_name, pl) in enumerate(plines):
-        plt.plot(
-            pl["x"],
-            pl["y"],
-            ".-",
-            lw=0.01,
-            color=cm.viridis(ipl / len(plines)),
-        )
+        data = csvdata[(csvdata["iprp"] == pl_name[0]) & (csvdata["irpt"] == pl_name[1]) & (csvdata["trelease"] == pl_name[2])]
+        data.plot(
+            kind="line",
+            x='x',
+            y='y',
+            ax=ax,
+            legend=False,
+            color=cm.plasma(ipl / len(plines)))
+
     # plt.show()
 
     # cols = csvdata.columns
