@@ -44,7 +44,7 @@ def check_track_data(
     assert all(data_bin["irpt"] >= 1)
     assert all(data_bin["kper"] >= 1)
     assert all(data_bin["kstp"] >= 1)
-    # assert all(data_bin["ilay"] >= 1)
+    assert all(data_bin["ilay"] >= 1)
     assert all(data_bin["icell"] >= 1)
     # assert all(data_bin["istatus"] >= 0)
     assert all(data_bin["ireason"] >= 0)
