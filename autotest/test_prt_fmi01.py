@@ -361,12 +361,8 @@ def test_prt_fmi01(function_tmpdir, targets):
     pmv.plot_vector(qx, qy, normalize=True, color="white")
     mf6_plines = mf6_pldata.groupby(["iprp", "irpt", "trelease"])
     for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-        # data = mf6_pldata[
-        #     (mf6_pldata["iprp"] == pl_name[0])
-        #     & (mf6_pldata["irpt"] == pl_name[1])
-        #     & (mf6_pldata["trelease"] == pl_name[2])
-        # ]
         pl.plot(
+            title="MF6 pathlines",
             kind="line",
             x="x",
             y="y",
@@ -382,14 +378,14 @@ def test_prt_fmi01(function_tmpdir, targets):
     pmv.plot_vector(qx, qy, normalize=True, color="white")
     mp7_plines = mp7_pldata.groupby(["particleid"])
     for ipl, (pid, pl) in enumerate(mp7_plines):
-        # data = mp7_pldata[(mp7_pldata["particleid"] == pl_name[0])]
         pl.plot(
+            title="MP7 pathlines",
             kind="line",
             x="x",
             y="y",
             ax=ax[1],
             legend=False,
-            color=cm.plasma(ipl / len(mf6_plines)),
+            color=cm.plasma(ipl / len(mp7_plines)),
         )
 
     # view/save plot
@@ -399,7 +395,7 @@ def test_prt_fmi01(function_tmpdir, targets):
     # convert mf6 pathlines to mp7 format
     mf6_pldata_mp7 = to_mp7_format(mf6_pldata)
 
-    # sort, then compare mf6 with mp7 results
+    # sort both dataframes by particleid and time
     mf6_pldata_mp7.sort_values(by=["particleid", "time"], inplace=True)
     mp7_pldata.sort_values(by=["particleid", "time"], inplace=True)
 
@@ -420,6 +416,6 @@ def test_prt_fmi01(function_tmpdir, targets):
     del mp7_pldata["yloc"]
     del mp7_pldata["zloc"]
 
-    # todo check mf6 track data against mp7 pathline data
+    # compare mf6 / mp7 pathline data
     assert mf6_pldata_mp7.shape == mp7_pldata.shape
     assert np.allclose(mf6_pldata_mp7, mp7_pldata, atol=1e-3)
