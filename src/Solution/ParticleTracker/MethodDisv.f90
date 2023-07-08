@@ -192,7 +192,7 @@ contains
       select type (dis => this%fmi%dis)
       type is (GwfDisvType)
         icu = dis%get_nodeuser(ic)
-        call get_jk(ic, dis%ncpl, dis%nlay, icpl, ilay)
+        call get_jk(icu, dis%ncpl, dis%nlay, icpl, ilay)
         particle%icu = icu
         particle%ilay = ilay
       end select
