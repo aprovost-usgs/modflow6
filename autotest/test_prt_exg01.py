@@ -1,12 +1,17 @@
-"""Test gwf+prt models in same simulation via exchange"""
+"""
+Test GWF and PRT models in the same simulation
+with an exchange.
+
+The grid is a 10x10 square with a single layer.
+The same flow system shown on the FloPy readme.
+Particles are released from the top left cell.
+"""
 
 
 import os
 from pathlib import Path
 
 import flopy
-from flopy.utils.binaryfile import write_budget, write_head
-from flopy.utils.gridutil import uniform_flow_field
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pandas as pd
@@ -16,10 +21,10 @@ from flopy.utils.binaryfile import HeadFile
 from framework import TestFramework
 from simulation import TestSimulation
 
-from prt_track_utils import check_track_data, get_track_dtype
+from prt_track_utils import check_track_data
 
 # model names
-name="prtexg1"
+name = "prtexg1"
 gwfname = f"{name}"
 prtname = f"{name}_prt"
 
@@ -33,16 +38,16 @@ prt_track_file = f"{prtname}.trk"
 prt_track_csv_file = f"{prtname}.trk.csv"
 
 # model info
-nlay=1
-nrow=10
-ncol=10
-top=1.0
-botm=[0.0]
-nper=1
-perlen=1.0
-nstp=1
-tsmult=1.0
-porosity=0.1
+nlay = 1
+nrow = 10
+ncol = 10
+top = 1.0
+botm = [0.0]
+nper = 1
+perlen = 1.0
+nstp = 1
+tsmult = 1.0
+porosity = 0.1
 releasepts = [
     # index, k, i, j, x, y, z
     # (0-based indexing converted to 1-based for mf6 by flopy)
@@ -252,7 +257,7 @@ ex = [name]
 
 def build_sim(ws, mf6):
     workspace = ws
-    
+
     # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -353,10 +358,13 @@ def build_sim(ws, mf6):
     )
 
     # create the flow model interface
-    flopy.mf6.ModflowPrtfmi(prt, packagedata=[
-        ("GWFHEAD", gwf_head_file),
-        ("GWFBUDGET", gwf_budget_file),
-    ])
+    flopy.mf6.ModflowPrtfmi(
+        prt,
+        packagedata=[
+            ("GWFHEAD", gwf_head_file),
+            ("GWFBUDGET", gwf_budget_file),
+        ],
+    )
 
     # create exchange
     flopy.mf6.ModflowGwfprt(
@@ -435,8 +443,11 @@ def test_mf6model(name, function_tmpdir, targets):
     test = TestFramework()
     test.run(
         TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, 
-            idxsim=0, make_comparison=False,
+            name=name,
+            exe_dict=targets,
+            exfunc=eval_results,
+            idxsim=0,
+            make_comparison=False,
         ),
         str(ws),
     )
@@ -455,19 +466,24 @@ def test_mf6model(name, function_tmpdir, targets):
     pmv.plot_array(hds[0], alpha=0.1)
     pmv.plot_vector(qx, qy, normalize=True, color="white")
     csvdata = pd.read_csv(ws / prt_track_csv_file)
-    plines = csvdata.groupby(['iprp', 'irpt', 'trelease'])
+    plines = csvdata.groupby(["iprp", "irpt", "trelease"])
     ax = plt.gca()
 
     # plot color-coded pathlines
     for ipl, (pl_name, pl) in enumerate(plines):
-        data = csvdata[(csvdata["iprp"] == pl_name[0]) & (csvdata["irpt"] == pl_name[1]) & (csvdata["trelease"] == pl_name[2])]
+        data = csvdata[
+            (csvdata["iprp"] == pl_name[0])
+            & (csvdata["irpt"] == pl_name[1])
+            & (csvdata["trelease"] == pl_name[2])
+        ]
         data.plot(
             kind="line",
-            x='x',
-            y='y',
+            x="x",
+            y="y",
             ax=ax,
             legend=False,
-            color=cm.plasma(ipl / len(plines)))
+            color=cm.plasma(ipl / len(plines)),
+        )
 
     # plt.show()
 
@@ -483,6 +499,6 @@ def test_mf6model(name, function_tmpdir, targets):
     for col in cols:
         if col in exp_locs.dtype.names:
             assert np.allclose(locs[col], exp_locs[col])
-        
+
         if col == "ilay":
             assert np.all(locs[col] == 1)

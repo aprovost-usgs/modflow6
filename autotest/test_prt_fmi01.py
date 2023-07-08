@@ -3,6 +3,7 @@ Tests ability to run a GWF model then a PRT model
 in separate simulations via flow model interface.
 
 The grid is a 10x10 square with a single layer.
+The same flow system shown on the FloPy readme.
 Particles are released from the top left cell.
 """
 
@@ -17,7 +18,7 @@ import numpy as np
 import pandas as pd
 from flopy.utils.binaryfile import HeadFile
 
-from prt_track_utils import check_track_data, get_track_dtype
+from prt_track_utils import check_track_data
 
 # model names
 name = "prtfmi01"

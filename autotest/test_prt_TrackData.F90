@@ -39,8 +39,8 @@ contains
     particle%istopweaksink = 0
     particle%iTrackingDomain(levelMin:levelMax) = 0
     particle%iTrackingDomainBoundary(levelMin:levelMax) = 0
-    ! particle%icu = 0
-    ! particle%ilay = 0
+    particle%icu = 0
+    particle%ilay = 0
     particle%izone = 0
     particle%istatus = 0
     particle%x = 0
@@ -65,7 +65,7 @@ contains
     call check(error, size(trackdata%irpt) == nt1)
     call check(error, size(trackdata%kper) == nt1)
     call check(error, size(trackdata%kstp) == nt1)
-    ! call check(error, size(trackdata%ilay) == nt1)
+    call check(error, size(trackdata%ilay) == nt1)
     call check(error, size(trackdata%icell) == nt1)
     call check(error, size(trackdata%izone) == nt1)
     call check(error, size(trackdata%istatus) == nt1)
@@ -85,7 +85,7 @@ contains
     call check(error, size(trackdata%irpt) == nt2)
     call check(error, size(trackdata%kper) == nt2)
     call check(error, size(trackdata%kstp) == nt2)
-    ! call check(error, size(trackdata%ilay) == nt2)
+    call check(error, size(trackdata%ilay) == nt2)
     call check(error, size(trackdata%icell) == nt2)
     call check(error, size(trackdata%izone) == nt2)
     call check(error, size(trackdata%istatus) == nt2)
@@ -124,8 +124,8 @@ contains
     particle%istopweaksink = 0
     particle%iTrackingDomain(levelMin:levelMax) = 0
     particle%iTrackingDomainBoundary(levelMin:levelMax) = 0
-    ! particle%icu = 0
-    ! particle%ilay = 0
+    particle%icu = 0
+    particle%ilay = 0
     particle%izone = 0
     particle%istatus = 0
     particle%x = 0
@@ -154,7 +154,7 @@ contains
     call check(error, size(trackdata%irpt) == nt1)
     call check(error, size(trackdata%kper) == nt1)
     call check(error, size(trackdata%kstp) == nt1)
-    ! call check(error, size(trackdata%ilay) == nt1)
+    call check(error, size(trackdata%ilay) == nt1)
     call check(error, size(trackdata%icell) == nt1)
     call check(error, size(trackdata%izone) == nt1)
     call check(error, size(trackdata%istatus) == nt1)
@@ -169,7 +169,7 @@ contains
     ! add particle to track data
     print *, "adding first particle to track data"
     call trackdata%add_track_data(particle, kper=kper, &
-                                   kstp=kstp, reason=0)
+                                  kstp=kstp, reason=0)
 
     ! check track data values
     print *, "checking initial track data values"
@@ -177,7 +177,7 @@ contains
     call check(error, trackdata%irpt(1) == 0)
     call check(error, trackdata%kper(1) == 1)
     call check(error, trackdata%kstp(1) == 1)
-    ! call check(error, trackdata%ilay(1) == 0)
+    call check(error, trackdata%ilay(1) == 0)
     call check(error, trackdata%icell(1) == 0)
     call check(error, trackdata%izone(1) == 0)
     call check(error, trackdata%istatus(1) == 0)
@@ -192,7 +192,7 @@ contains
     ! add another particle to track data
     print *, "adding another particle to track data"
     call trackdata%add_track_data(particle, kper=kper, &
-                                   kstp=kstp, reason=0)
+                                  kstp=kstp, reason=0)
 
     ! check that arrays were automatically expanded by factor of 10
     print *, "checking arrays were expanded by factor of 10"
@@ -201,7 +201,7 @@ contains
     call check(error, size(trackdata%irpt) == nt2)
     call check(error, size(trackdata%kper) == nt2)
     call check(error, size(trackdata%kstp) == nt2)
-    ! call check(error, size(trackdata%ilay) == nt2)
+    call check(error, size(trackdata%ilay) == nt2)
     call check(error, size(trackdata%icell) == nt2)
     call check(error, size(trackdata%izone) == nt2)
     call check(error, size(trackdata%istatus) == nt2)
