@@ -366,6 +366,7 @@ contains
         itrack1 => this%itrack(iprp)
         itrack2 => this%itrack(iprp + 1)
         call packobj%prp_set_pointers(this%ibound, &
+                                      this%mip%izone, &
                                       itrack1, &
                                       itrack2, &
                                       this%trackdata) ! kluge

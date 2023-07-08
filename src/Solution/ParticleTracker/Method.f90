@@ -72,13 +72,18 @@ contains
       ! -- continue delegating
       call submethod%apply(particle, tmax)
 
-      ! -- Advance particle
-      call advance(this, particle, levelNext, submethod, isStillAdvancing)
-
       ! -- Store particle trackdata as appropriate
       call submethod%trackdata%add_track_data(particle, &
                                               kper=kper, kstp=kstp, &
                                               reason=1, level=levelNext)
+
+      ! -- Advance particle
+      call advance(this, particle, levelNext, submethod, isStillAdvancing)
+
+      ! -- Store particle trackdata as appropriate
+      ! call submethod%trackdata%add_track_data(particle, &
+      !                                         kper=kper, kstp=kstp, &
+      !                                         reason=1, level=levelNext)
     end do
     !
     return

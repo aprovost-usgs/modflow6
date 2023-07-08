@@ -17,16 +17,15 @@ module MethodDisModule
   public :: MethodDisType
   public :: create_methodDis
 
-  ! -- Extend MethodType to the DIS-grid method type (MethodDisType)
   type, extends(MethodType) :: MethodDisType
     private
-    type(PrtFmiType), pointer :: fmi => null() !< flow model interface
-    ! type(CellDefnType), pointer :: cellDefn ! cellDefn object injected into cell method
-    real(DP), dimension(:), pointer, contiguous :: flowja => null() !< intercell flows
-    type(CellRectType), pointer :: cellRect ! rectangular cell
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< pointer to aquifer porosity
-    real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< pointer to retardation factor
-    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number
+    type(PrtFmiType), pointer :: fmi => null() !< pointer to flow model interface
+    ! type(CellDefnType), pointer :: cellDefn ! pointer to cellDefn object injected into cell method
+    real(DP), dimension(:), pointer, contiguous :: flowja => null() !< pointer to intercell flows
+    type(CellRectType), pointer :: cellRect ! pointer to rectangular cell
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< pointer to aquifer porosity array
+    real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< pointer to retardation factor array
+    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number array
   contains
     procedure, public :: destroy ! destructor for the method
     procedure, public :: init ! initializes the method

@@ -25,18 +25,18 @@ module TrackDataModule
     ! Notes
     ! -----
     !
-    ! Structure of arrays to hold particle tracks. Arrays are in long format.
+    ! Structure of arrays to hold particle tracks.
     ! Each particle's track across the simulation domain consists of 1+ rows.
     !
     ! There is no particle ID column. Particles can be uniquely identified by
-    ! a "composite key", i.e. a combination of column values:
+    ! "composite key", i.e. combination of column values:
     !   - imdl: originating model ID (todo)
     !   - iprp: originating PRP ID
     !   - irpt: particle release location ID
     !   - trelease: particle release time
     !
-    ! Enumerations defined below:
-    !   istatus is the same as MODPATH 7's status:
+    ! Enumerations:
+    !   istatus (like MODPATH 7's status):
     !     0: pending release (kluge: is this necessary?)
     !     1: active
     !     2: terminated at boundary face
@@ -45,10 +45,11 @@ module TrackDataModule
     !     5: terminated in cell with no exit face
     !     6: terminated in cell with specified zone number
     !     7: terminated in inactive cell
-    !     8: permanently unreleased
+    !     8: permanently unreleased (e.g. released into an inactive cell, into a cell in a termination
+    !                                zone, into a cell with no exit face, into a stop zone cell, etc)
     !     9: terminated for unknown reason (kluge: is this necessary?)
     !
-    !   ireason can take values:
+    !   ireason
     !     0: release
     !     1: cross spatial boundary (cell? subcell? or generic feature? worth distinguishing?)
     !     2: cross temporal boundary (time step end)

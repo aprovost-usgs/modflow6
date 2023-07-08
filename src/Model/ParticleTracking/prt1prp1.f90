@@ -45,6 +45,7 @@ module PrtPrpModule
     integer(I4B), pointer :: ioutinactive => null() !< output for inactive particles: 0 = no output, 1 = output
     integer(I4B), pointer :: idrape => null() !< drape option: 0 = do not drape, 1 = drape to topmost active cell
     integer(I4B), dimension(:), pointer, contiguous :: noder => null() !< reduced node number of release point
+    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< zone number
     real(DP), dimension(:), pointer, contiguous :: x => null() !< x coordinate of particle release point
     real(DP), dimension(:), pointer, contiguous :: y => null() !< y coordinate of particle release point
     real(DP), dimension(:), pointer, contiguous :: z => null() !< z coordinate of particle release point
@@ -204,16 +205,20 @@ contains
 
   !> @ brief Set pointers to model variables
   !<
-  subroutine prp_set_pointers(this, ibound, itrack1, itrack2, trackdata)
+  subroutine prp_set_pointers(this, ibound, izone, itrack1, itrack2, trackdata)
     ! -- dummy variables
     class(PrtPrpType) :: this !< PrtPrpType object
     integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), dimension(:), pointer, contiguous :: izone
     integer(I4B), pointer :: itrack1
     integer(I4B), pointer :: itrack2
     type(TrackDataType), pointer :: trackdata
     !
     ! -- Set pointer to PRT model ibound
     this%ibound => ibound
+    !
+    ! -- Set pointer to PRT model izone
+    this%izone => izone
     !
     ! -- Set pointers to track data
     this%itrack1 => itrack1
@@ -457,7 +462,7 @@ contains
           if (this%stoptime < tstop) tstop = this%stoptime
         end if
 
-        ! -- Compute user node number and layer of starting location
+        ! -- Compute starting location's (user) node number and layer number
         icu = this%dis%get_nodeuser(ic)
         select type (dis => this%dis) ! kluge???
         type is (GwfDisType)
@@ -480,7 +485,7 @@ contains
         this%partlist%irpt(np) = nps
         this%partlist%icu = icu
         this%partlist%ilay = ilay
-        this%partlist%izone = 1 ! particles start in zone 1 (active domain)
+        this%partlist%izone = this%izone(ic)
         this%partlist%istatus(np) = 1
         this%partlist%iTrackingDomain(np, 0) = 0 ! kluge???
         this%partlist%iTrackingDomainBoundary(np, 0) = 0 ! kluge???

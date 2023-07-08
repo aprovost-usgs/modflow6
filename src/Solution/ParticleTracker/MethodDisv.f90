@@ -17,16 +17,15 @@ module MethodDisvModule
   public :: MethodDisvType
   public :: create_methodDisv
 
-  ! -- Extend MethodType to the DISV-grid method type (MethodDisvType)
   type, extends(MethodType) :: MethodDisvType
     private
-    type(PrtFmiType), pointer :: fmi => null() !< flow model interface
+    type(PrtFmiType), pointer :: fmi => null() !< ptr to flow model interface
     ! type(CellDefnType), pointer :: cellDefn ! cellDefn object injected into cell method
-    real(DP), dimension(:), pointer, contiguous :: flowja => null() !< intercell flows
-    type(CellPolyType), pointer :: cellPoly ! polygonal cell
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< ptr to aquifer porosity
-    real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< ptr to retardation factor
-    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number
+    real(DP), dimension(:), pointer, contiguous :: flowja => null() !< ptr to intercell flows
+    type(CellPolyType), pointer :: cellPoly ! ptr to polygonal cell
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< ptr to aquifer porosity array
+    real(DP), dimension(:), pointer, contiguous :: retfactor => null() !< ptr to retardation factor array
+    integer(I4B), dimension(:), pointer, contiguous :: izone => null() !< pointer to zone number array
   contains
     ! kluge note: must procedures like this be denoted as public (as and throughout)???
     procedure, public :: destroy ! destructor for the method

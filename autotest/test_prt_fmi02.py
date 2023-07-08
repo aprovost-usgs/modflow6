@@ -13,7 +13,9 @@ top right cells of the model grid.
 One motivation for this test case is to check 
 cell numbers reported in pathline data - they
 should have been converted from reduced node
-numbers to user node numbers 
+numbers to user node numbers.
+
+Results are commpared against a MODPATH 7 model.
 """
 
 
@@ -76,9 +78,7 @@ idomain[0, 9, 0] = 0
 
 # expected particle track solution locations
 exp_locs = np.array(
-    [
-
-    ],
+    [],
     dtype=[
         ("x", "<f8"),
         ("y", "<f8"),
@@ -226,10 +226,13 @@ def build_prt_sim(ws, mf6):
     )
 
     # create the flow model interface
-    flopy.mf6.ModflowPrtfmi(prt, packagedata=[
-        ("GWFHEAD", gwf_head_file),
-        ("GWFBUDGET", gwf_budget_file),
-    ])
+    flopy.mf6.ModflowPrtfmi(
+        prt,
+        packagedata=[
+            ("GWFHEAD", gwf_head_file),
+            ("GWFBUDGET", gwf_budget_file),
+        ],
+    )
 
     # add explicit model solution
     ems = flopy.mf6.ModflowEms(
