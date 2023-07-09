@@ -269,13 +269,13 @@ def check_budget_data(lst: os.PathLike, cbb: os.PathLike):
     assert all(en in names for en in expected_entries)
 
     # load and check cell budget file
-    # todo: reinstate below after mass budget is saved to budget file
-    # mfbud = flopy.utils.binaryfile.CellBudgetFile(cbb)
-    # assert mfbud.nlay == nlay
-    # assert mfbud.nrow == nrow
-    # assert mfbud.ncol == ncol
-    # assert len(mfbud.times) == 1
-    # assert mfbud.times[0] == perlen
+    mfbud = flopy.utils.binaryfile.CellBudgetFile(cbb)
+    assert mfbud.nlay == nlay
+    assert mfbud.nrow == nrow
+    assert mfbud.ncol == ncol
+    assert len(mfbud.times) == 1
+    assert mfbud.times[0] == perlen
+    # todo check particle mass?
 
 
 def test_prt_fmi01(function_tmpdir, targets):

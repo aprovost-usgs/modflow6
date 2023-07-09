@@ -257,6 +257,15 @@ def check_budget_data(lst: os.PathLike, cbb: os.PathLike):
     ]
     assert all(en in names for en in expected_entries)
 
+    # load and check cell budget file
+    mfbud = flopy.utils.binaryfile.CellBudgetFile(cbb)
+    assert mfbud.nlay == nlay
+    assert mfbud.nrow == nrow
+    assert mfbud.ncol == ncol
+    assert len(mfbud.times) == 1
+    assert mfbud.times[0] == perlen
+    # todo check particle mass?
+
 
 def eval_results(sim):
     print(f"Evaluating results for sim {sim.name}")
