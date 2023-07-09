@@ -170,7 +170,6 @@ def build_prt_sim(ws, mf6):
     flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
 
     # create prp package
-
     flopy.mf6.ModflowPrtprp(
         prt,
         pname="prp1",
@@ -400,6 +399,7 @@ def test_prt_fmi01(function_tmpdir, targets):
     mp7_pldata.sort_values(by=["particleid", "time"], inplace=True)
 
     # drop duplicate locations
+    # (mp7 includes a duplicate location at the end of each pathline??)
     cols = ["particleid", "x", "y", "z", "time"]
     mp7_pldata = mp7_pldata.drop_duplicates(subset=cols)
     mf6_pldata_mp7 = mf6_pldata_mp7.drop_duplicates(subset=cols)

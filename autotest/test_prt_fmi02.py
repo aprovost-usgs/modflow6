@@ -1,22 +1,26 @@
 """
-Tests ability to run a GWF model then a PRT model
-in separate simulations via flow model interface.
+This test is similar to test_prt_fmi01.py, except
+particles are split across two release packages,
+and the grid has an inactive region. This tests
+that cell numbers recorded in pathline data have
+been converted from reduced to user node numbers.
+This is verified by using FloPy to intersect path
+points with the grid, then compute node numbers.
+
+Track output is persisted to PRP-specific files
+as well as the combined full-model track file.
+
+GWF and PRT models run in separate simulations
+via flow model interface.
 
 The grid is a 10x10 square with a single layer,
 the same flow system shown on the FloPy readme,
 except for 2 inactive cells in the bottom left
 and top right corners.
 
-Particles are released from the bottom left and
-top right cells of the model grid.
+Particles are released from the top left cell.
 
-One motivation for this test case is to make sure
-that cell numbers recorded in pathline data have
-been converted from reduced to user node numbers.
-This is verified by using FloPy to intersect path
-points with the grid, then compute node numbers.
-
-Results are commpared against a MODPATH 7 model.
+Results are compared against a MODPATH 7 model.
 """
 
 
@@ -452,6 +456,7 @@ def test_prt_fmi02(function_tmpdir, targets):
     mf6_pldata_mp7 = to_mp7_format(mf6_pldata)
 
     # drop duplicate locations
+    # (mp7 includes a duplicate location at the end of each pathline??)
     cols = ["x", "y", "z", "time"]
     mp7_pldata = mp7_pldata.drop_duplicates(subset=cols)
     mf6_pldata_mp7 = mf6_pldata_mp7.drop_duplicates(subset=cols)
@@ -471,8 +476,8 @@ def test_prt_fmi02(function_tmpdir, targets):
     del mp7_pldata["zloc"]
 
     # sort both dataframes by particleid and time
-    mf6_pldata_mp7 = mf6_pldata_mp7.sort_values(by=["x", "y", "z", "time"])
-    mp7_pldata = mp7_pldata.sort_values(by=["x", "y", "z", "time"])
+    mf6_pldata_mp7 = mf6_pldata_mp7.sort_values(by=cols)
+    mp7_pldata = mp7_pldata.sort_values(by=cols)
 
     # compare mf6 / mp7 pathline data
     assert mf6_pldata_mp7.shape == mp7_pldata.shape

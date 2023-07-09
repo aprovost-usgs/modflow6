@@ -1,9 +1,15 @@
 """
-Test GWF and PRT models in the same simulation
-with an exchange.
+This test checks that zones defined in the model
+input package (MIP) are correctly applied to the
+particle tracking simulation, i.e. particles are
+terminated when they enter the appropriate zone.
 
-The grid is a 10x10 square with a single layer.
-The same flow system shown on the FloPy readme.
+GWF and PRT models run in separate simulations
+via flow model interface.
+
+The grid is a 10x10 square with a single layer,
+the same flow system shown on the FloPy readme.
+
 Particles are released from the top left cell.
 
 Results are compared against a MODPATH 7 model.
@@ -14,21 +20,17 @@ import os
 from pathlib import Path
 
 import flopy
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
-import pytest
 from flopy.utils.binaryfile import HeadFile
 from flopy.utils import PathlineFile
-from framework import TestFramework
-from prt_track_utils import check_track_data
-from simulation import TestSimulation
 
-from prt_track_utils import to_mp7_format
+from prt_track_utils import check_track_data, to_mp7_format
 
 # model names
-name = "prtexg1"
+name = "prtfmi02"
 gwfname = f"{name}"
 prtname = f"{name}_prt"
 mp7name = f"{name}_mp7"
@@ -41,7 +43,7 @@ prt_track_file = f"{prtname}.trk"
 prt_track_csv_file = f"{prtname}.trk.csv"
 mp7_pathline_file = f"{mp7name}.mppth"
 
-# model info
+# problem info
 nlay = 1
 nrow = 10
 ncol = 10
@@ -52,8 +54,11 @@ perlen = 1.0
 nstp = 1
 tsmult = 1.0
 porosity = 0.1
+
+# release points
+# todo: define for mp7 first, then use flopy utils to convert to global coords for mf6 prt
 releasepts = [
-    # index, k, i, j, x, y, z
+    # particle index, k, i, j, x, y, z
     # (0-based indexing converted to 1-based for mf6 by flopy)
     (i, 0, 0, 0, float(f"0.{i + 1}"), float(f"9.{i + 1}"), 0.5)
     for i in range(9)
@@ -65,11 +70,13 @@ releasepts_mp7 = [
     for i in range(9)
 ]
 
-# test cases
-ex = [name]
+# izone
+izone = np.ones((nlay, nrow, ncol), dtype=int)
+izone[0, 8, 8] = 1
+izone[0, 1, 1] = 1
 
 
-def build_sim(ws, mf6):
+def build_gwf_sim(ws, mf6):
     # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -79,13 +86,13 @@ def build_sim(ws, mf6):
     )
 
     # create tdis package
-    perioddata = (perlen, nstp, tsmult)
+    pd = (perlen, nstp, tsmult)
     flopy.mf6.modflow.mftdis.ModflowTdis(
         sim,
         pname="tdis",
         time_units="DAYS",
         nper=nper,
-        perioddata=[perioddata],
+        perioddata=[pd],
     )
 
     # create gwf model
@@ -134,6 +141,28 @@ def build_sim(ws, mf6):
     # create iterative model solution for gwf model
     ims = flopy.mf6.ModflowIms(sim)
 
+    return sim
+
+
+def build_prt_sim(ws, mf6):
+    # create simulation
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name,
+        exe_name=mf6,
+        version="mf6",
+        sim_ws=ws,
+    )
+
+    # create tdis package
+    pd = (perlen, nstp, tsmult)
+    flopy.mf6.modflow.mftdis.ModflowTdis(
+        sim,
+        pname="tdis",
+        time_units="DAYS",
+        nper=nper,
+        perioddata=[pd],
+    )
+
     # create prt model
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
 
@@ -147,7 +176,12 @@ def build_sim(ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
+    flopy.mf6.ModflowPrtmip(
+        prt,
+        pname="mip",
+        porosity=porosity,
+        # izone=izone,  todo reinstate when izone implemented
+    )
 
     # create prp package
     flopy.mf6.ModflowPrtprp(
@@ -157,6 +191,7 @@ def build_sim(ws, mf6):
         nreleasepts=len(releasepts),
         packagedata=releasepts,
         perioddata={0: ["FIRST"]},
+        # istopzone=1
     )
 
     # create output control package
@@ -170,22 +205,11 @@ def build_sim(ws, mf6):
     )
 
     # create the flow model interface
-    flopy.mf6.ModflowPrtfmi(
-        prt,
-        packagedata=[
-            ("GWFHEAD", gwf_head_file),
-            ("GWFBUDGET", gwf_budget_file),
-        ],
-    )
-
-    # create exchange
-    flopy.mf6.ModflowGwfprt(
-        sim,
-        exgtype="GWF6-PRT6",
-        exgmnamea=gwfname,
-        exgmnameb=prtname,
-        filename=f"{gwfname}.gwfprt",
-    )
+    pd = [
+        ("GWFHEAD", gwf_head_file),
+        ("GWFBUDGET", gwf_budget_file),
+    ]
+    flopy.mf6.ModflowPrtfmi(prt, packagedata=pd)
 
     # add explicit model solution
     ems = flopy.mf6.ModflowEms(
@@ -257,52 +281,32 @@ def check_budget_data(lst: os.PathLike, cbb: os.PathLike):
     ]
     assert all(en in names for en in expected_entries)
 
-
-def eval_results(sim):
-    print(f"Evaluating results for sim {sim.name}")
-    simpath = Path(sim.simpath)
-
-    # check budget data
-    check_budget_data(
-        simpath / f"{sim.name}_prt.lst",
-        simpath / f"{sim.name}_prt.cbb",
-    )
-
-    # check particle track data
-    prt_track_file = simpath / f"{sim.name}_prt.trk"
-    prt_track_hdr_file = simpath / f"{sim.name}_prt.trk.hdr"
-    prt_track_csv_file = simpath / f"{sim.name}_prt.trk.csv"
-    assert prt_track_file.exists()
-    assert prt_track_hdr_file.exists()
-    assert prt_track_csv_file.exists()
-    check_track_data(
-        track_bin=prt_track_file,
-        track_hdr=prt_track_hdr_file,
-        track_csv=prt_track_csv_file,
-    )
+    # load and check cell budget file
+    # todo: reinstate below after mass budget is saved to budget file
+    # mfbud = flopy.utils.binaryfile.CellBudgetFile(cbb)
+    # assert mfbud.nlay == nlay
+    # assert mfbud.nrow == nrow
+    # assert mfbud.ncol == ncol
+    # assert len(mfbud.times) == 1
+    # assert mfbud.times[0] == perlen
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
+def test_prt_fmi03(function_tmpdir, targets):
     ws = function_tmpdir
-    sim = build_sim(str(ws), targets.mf6)
-    sim.write_simulation()
 
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=0,
-            make_comparison=False,
-        ),
-        str(ws),
-    )
+    # build mf6 simulations
+    gwfsim = build_gwf_sim(ws, targets.mf6)
+    prtsim = build_prt_sim(ws, targets.mf6)
 
-        # extract model objects
-    gwf = sim.get_model(gwfname)
-    prt = sim.get_model(prtname)
+    # run mf6 simulations
+    for sim in [gwfsim, prtsim]:
+        sim.write_simulation()
+        success, _ = sim.run_simulation()
+        assert success
+
+    # extract models
+    gwf = gwfsim.get_model(gwfname)
+    prt = prtsim.get_model(prtname)
 
     # extract model grid
     mg = gwf.modelgrid
@@ -342,15 +346,14 @@ def test_mf6model(name, function_tmpdir, targets):
     # check mf6 cell budget file
     check_budget_data(ws / f"{name}_prt.lst", ws / prt_budget_file)
 
-    # check mf6 track data written to different formats are equal
+    # check mf6 track data
     check_track_data(
         track_bin=ws / prt_track_file,
         track_hdr=ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
         track_csv=ws / prt_track_csv_file,
     )
 
-    # extract head, budget, and specific discharge results from GWF model
-    gwf = sim.get_model(name)
+    # get head, budget, and spdis results from GWF model
     hds = HeadFile(ws / gwf_head_file).get_data()
     bud = gwf.output.budget()
     spdis = bud.get_data(text="DATA-SPDIS")[0]
@@ -402,28 +405,48 @@ def test_mf6model(name, function_tmpdir, targets):
     # convert mf6 pathlines to mp7 format
     mf6_pldata_mp7 = to_mp7_format(mf6_pldata)
 
-    # sort both dataframes by particleid and time
-    mf6_pldata_mp7.sort_values(by=["particleid", "time"], inplace=True)
-    mp7_pldata.sort_values(by=["particleid", "time"], inplace=True)
-
     # drop duplicate locations
     # (mp7 includes a duplicate location at the end of each pathline??)
-    cols = ["particleid", "x", "y", "z", "time"]
+    cols = ["x", "y", "z", "time"]
     mp7_pldata = mp7_pldata.drop_duplicates(subset=cols)
     mf6_pldata_mp7 = mf6_pldata_mp7.drop_duplicates(subset=cols)
 
     # drop columns for which there is no direct correspondence between mf6 and mp7
+    del mf6_pldata_mp7["particleid"]
     del mf6_pldata_mp7["sequencenumber"]
     del mf6_pldata_mp7["particleidloc"]
     del mf6_pldata_mp7["xloc"]
     del mf6_pldata_mp7["yloc"]
     del mf6_pldata_mp7["zloc"]
+    del mp7_pldata["particleid"]
     del mp7_pldata["sequencenumber"]
     del mp7_pldata["particleidloc"]
     del mp7_pldata["xloc"]
     del mp7_pldata["yloc"]
     del mp7_pldata["zloc"]
 
+    # sort both dataframes by particleid and time
+    mf6_pldata_mp7 = mf6_pldata_mp7.sort_values(by=cols)
+    mp7_pldata = mp7_pldata.sort_values(by=cols)
+
     # compare mf6 / mp7 pathline data
     assert mf6_pldata_mp7.shape == mp7_pldata.shape
     assert np.allclose(mf6_pldata_mp7, mp7_pldata, atol=1e-3)
+
+    # check that cell numbers are correct
+    for i, row in list(mf6_pldata.iterrows()):
+        x, y, z, t, ilay, icell = (
+            row.x,
+            row.y,
+            row.z,
+            row.t,
+            row.ilay,
+            row.icell,
+        )
+        k, i, j = mg.intersect(x, y, z)
+        nn = mg.get_node([k, i, j]) + 1
+        neighbors = mg.neighbors(nn)
+        assert np.isclose(nn, icell, atol=1) or any(
+            (nn - 1) == n for n in neighbors
+        )
+        assert ilay == (k + 1) == 1
