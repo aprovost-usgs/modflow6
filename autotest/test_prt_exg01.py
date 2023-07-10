@@ -169,14 +169,15 @@ def build_sim(ws, mf6):
         saverecord=[("BUDGET", "ALL")],
     )
 
-    # create the flow model interface
-    flopy.mf6.ModflowPrtfmi(
-        prt,
-        packagedata=[
-            ("GWFHEAD", gwf_head_file),
-            ("GWFBUDGET", gwf_budget_file),
-        ],
-    )
+    # create a flow model interface
+    # todo Fienen's report (crash when FMI created but not needed)
+    # flopy.mf6.ModflowPrtfmi(
+    #     prt,
+    #     packagedata=[
+    #         ("GWFHEAD", gwf_head_file),
+    #         ("GWFBUDGET", gwf_budget_file),
+    #     ],
+    # )
 
     # create exchange
     flopy.mf6.ModflowGwfprt(
