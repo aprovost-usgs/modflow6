@@ -112,7 +112,7 @@ contains
     ! call mem_setptr(mempath, 'TRACKMEMPATH', mempath)
     call mem_allocate(this%kper, nt, 'TRACKKPER', mempath)
     call mem_allocate(this%kstp, nt, 'TRACKKSTP', mempath)
-    call mem_allocate(this%kper, nt, 'TRACKIMDL', mempath)
+    call mem_allocate(this%imdl, nt, 'TRACKIMDL', mempath)
     call mem_allocate(this%iprp, nt, 'TRACKIPRP', mempath)
     call mem_allocate(this%irpt, nt, 'TRACKIRPT', mempath)
     call mem_allocate(this%ilay, nt, 'TRACKILAY', mempath)
@@ -168,7 +168,7 @@ contains
     !
     call mem_reallocate(this%kper, nt, 'TRACKKPER', mempath)
     call mem_reallocate(this%kstp, nt, 'TRACKKSTP', mempath)
-    call mem_reallocate(this%iprp, nt, 'TRACKIMDL', mempath)
+    call mem_reallocate(this%imdl, nt, 'TRACKIMDL', mempath)
     call mem_reallocate(this%iprp, nt, 'TRACKIPRP', mempath)
     call mem_reallocate(this%irpt, nt, 'TRACKIRPT', mempath)
     call mem_reallocate(this%ilay, nt, 'TRACKILAY', mempath)

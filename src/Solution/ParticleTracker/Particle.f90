@@ -16,7 +16,7 @@ module ParticleModule
     private
 
     ! identity
-    integer, public :: imdl ! index of model the particle originated in
+    integer(I4B), public :: imdl ! index of model the particle originated in
     integer(I4B), public :: iprp ! index of release package the particle originated in
     integer(I4B), public :: irpt ! index of release point in the particle release package the particle originated in
     integer(I4B), public :: ip ! index of particle in the particle list
@@ -61,7 +61,7 @@ module ParticleModule
     ! Stores particles belonging to a model.
 
     ! identity
-    integer, public :: imdl ! index of model particle originated in
+    integer(I4B), dimension(:), pointer, contiguous :: imdl ! index of model particle originated in
     integer(I4B), dimension(:), pointer, contiguous :: iprp ! index of release package the particle originated in
     integer(I4B), dimension(:), pointer, contiguous :: irpt ! index of release point in the particle release package the particle originated in
 
@@ -124,7 +124,7 @@ contains
     integer(I4B), intent(in) :: lmax ! maximum level in the tracking domain hierarchy
     character(*), intent(in) :: mempath ! path to memory
     !
-    call mem_allocate(this%irpt, np, 'PLIMDL', mempath)
+    call mem_allocate(this%imdl, np, 'PLIMDL', mempath)
     call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
     call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
     ! -- kluge todo: update mem_allocate to allow custom range of indices?
@@ -158,7 +158,7 @@ contains
     class(ParticleListType), intent(inout) :: this
     character(*), intent(in) :: mempath ! path to memory
     !
-    call mem_deallocate(this%iprp, 'PLIMDL', mempath)
+    call mem_deallocate(this%imdl, 'PLIMDL', mempath)
     call mem_deallocate(this%iprp, 'PLIPRP', mempath)
     call mem_deallocate(this%irpt, 'PLIRPT', mempath)
     ! call mem_deallocate(this%iTrackingDomain, 'PLITD', mempath)
@@ -192,7 +192,7 @@ contains
     character(*), intent(in) :: mempath ! path to memory
     !
     ! resize 1D arrays
-    call mem_reallocate(this%iprp, np, 'PLIMDL', mempath)
+    call mem_reallocate(this%imdl, np, 'PLIMDL', mempath)
     call mem_reallocate(this%iprp, np, 'PLIPRP', mempath)
     call mem_reallocate(this%irpt, np, 'PLIRPT', mempath)
     call mem_reallocate(this%icu, np, 'PLICU', mempath)
