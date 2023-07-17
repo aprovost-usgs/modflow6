@@ -22,8 +22,32 @@ on:
 env:
   LABEL: prt
 jobs:
+  set_options:
+    name: Set release options
+    if: github.ref_name != 'master'
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository_owner }}/modflow6
+          ref: PRT
+
+      - name: Set version
+        id: set_version
+        run: |
+          ver=$(cat version.txt | xargs)
+          echo "version=$ver" >> $GITHUB_OUTPUT
+
   make_dist:
     name: Make distribution
+    needs: set_options
     # don't make distribution if triggering event is pull request
     if: github.event_name == 'push' || github.event_name == 'schedule'
     uses: MODFLOW-USGS/modflow6/.github/workflows/release.yml@develop
@@ -34,7 +58,7 @@ jobs:
       full: false
       linux_version: ubuntu-20.04
       run_tests: false
-      version: 6.4.2prt
+      version: ${{ needs.set_options.outputs.version }}+prt
 
   release:
     name: Create release
