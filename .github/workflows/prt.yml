@@ -19,8 +19,6 @@ on:
       - 'doc/**'
   schedule:
     - cron: '0 2 * * *'
-env:
-  LABEL: prt
 jobs:
   set_options:
     name: Set release options
@@ -95,7 +93,7 @@ jobs:
         run: |
           echo "pruning artifacts"
           for f in mf*/mf*; do mv -- "$f" "$(basename $f)"; done
-          for f in *.zip; do mv -- "$f" "${f##mf*${{ env.LABEL }}_}"; done
+          for f in *.zip; do mv -- "$f" "${f##mf*prt_}"; done
           find mf* -type d -delete
           rm -rf bin-*
           rm -rf release_notes
