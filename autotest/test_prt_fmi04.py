@@ -332,6 +332,10 @@ def test_prt_fmi04(idx, name, function_tmpdir, targets):
     # load mf6 pathline results
     mf6_pldata = pd.read_csv(ws / prt_track_csv_file)
 
+    if "saws" not in name:
+        # check for an extra datum when particle exited weak sink
+        assert len(mf6_pldata[mf6_pldata["ireason"] == 3]) == 1
+
     # make sure all mf6 pathline data have correct model and PRP index (1)
     def all_equal(col, val):
         a = col.to_numpy()

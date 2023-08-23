@@ -3,6 +3,7 @@ module MethodModule
   use KindModule, only: DP, I4B
   use GlobalDataModule
   use ParticleModule ! kluge???
+  use CellDefnModule, only: CellDefnType
   use TrackDataModule, only: TrackDataType
   implicit none
 
@@ -23,6 +24,7 @@ module MethodModule
     ! -- Implemented in this base class
     procedure :: subtrack ! tracks the particle across subdomains
     procedure :: advance ! advances the particle
+    procedure :: update ! update particle state, terminating if appropriate and reporting
   end type MethodType
 
   abstract interface
@@ -142,5 +144,45 @@ contains
     return
     !
   end subroutine pass
+
+  !> @brief Update particle state and check termination conditions
+  !!
+  !! Update the particle's properties (e.g. advancing flag, zone number,
+  !! status). If any termination conditions apply, the particle's status
+  !! will be set to the appropriate termination value. If any reporting
+  !! conditions apply, report the particle location with the appropriate
+  !! reason code.
+  subroutine update(this, particle, celldefn)
+    ! -- modules
+    use TdisModule, only: kper, kstp
+    ! -- dummy
+    class(MethodType), intent(inout) :: this
+    type(ParticleType), pointer, intent(inout) :: particle
+    type(CellDefnType), pointer, intent(inout) :: celldefn
+    ! -- local
+    integer(I4B) :: reason
+
+    reason = -1
+    particle%izone = celldefn%izone
+
+    if (celldefn%izone .ne. 0) then
+      if (particle%istopzone .eq. celldefn%izone) then
+        particle%advancing = .false.
+        particle%istatus = 6
+      end if
+    else if (celldefn%inoexitface .ne. 0) then
+      particle%advancing = .false.
+      particle%istatus = 5
+    else if (celldefn%iweaksink .ne. 0) then
+      reason = 3
+      call this%trackdata%save_record(particle, kper=kper, &
+                                      kstp=kstp, reason=reason)
+      if (particle%istopweaksink .ne. 0) then
+        particle%advancing = .false.
+        particle%istatus = 3
+      end if
+    end if
+
+  end subroutine update
 
 end module MethodModule
