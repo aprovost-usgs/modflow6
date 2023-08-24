@@ -5,4 +5,5 @@ BEGIN OPTIONS
   [CONCENTRATION PRINT_FORMAT COLUMNS <columns> WIDTH <width> DIGITS <digits> <format>]
   [TRACK FILEOUT <trackfile>]
   [TRACKCSV FILEOUT <trackcsvfile>]
+  [OUTPUTEVENT <outputevent>]
 END OPTIONS

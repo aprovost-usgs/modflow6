@@ -4,7 +4,7 @@ module MethodCellPassToBotModule
   use MethodModule
   use CellDefnModule
   use ParticleModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
 
   private
@@ -60,7 +60,7 @@ contains
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     type(cellDefnType), pointer, intent(in) :: cellDefn
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     ! -- Set pointer to cell definition
     this%cellDefn => cellDefn

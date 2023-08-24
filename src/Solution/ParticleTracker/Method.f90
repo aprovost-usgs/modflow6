@@ -4,7 +4,7 @@ module MethodModule
   use GlobalDataModule
   use ParticleModule ! kluge???
   use CellDefnModule, only: CellDefnType
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
 
   private
@@ -14,7 +14,7 @@ module MethodModule
     ! private
     character(len=40), pointer, public :: trackingDomainType ! character string that names the tracking domain type
     logical, public :: delegatesTracking
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
   contains
     ! -- Implemented in all tracking methods
     procedure(apply), deferred :: apply ! applies the method

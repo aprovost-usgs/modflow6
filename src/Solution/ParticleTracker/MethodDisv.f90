@@ -9,7 +9,7 @@ module MethodDisvModule
   use ParticleModule
   use PrtFmiModule, only: PrtFmiType
   use UtilMiscModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
 
   private
@@ -90,7 +90,7 @@ contains
     real(DP), dimension(:), pointer, contiguous :: porosity
     real(DP), dimension(:), pointer, contiguous :: retfactor
     integer(I4B), dimension(:), pointer, contiguous :: izone
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     this%fmi => fmi
     this%flowja => flowja

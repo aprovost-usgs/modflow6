@@ -251,6 +251,15 @@ optional false
 longname write format
 description write format can be EXPONENTIAL, FIXED, GENERAL, or SCIENTIFIC.
 
+block options
+name outputevent
+type string
+shape
+reader urword
+tagged true
+optional true
+longname output event(s)
+description particle event(s) to record in output.  Can be ALL, RELEASE, TRANSIT, TIMESTEP, or WEAKSINK.
 
 # --------------------- prt oc period ---------------------
 

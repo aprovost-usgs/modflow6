@@ -127,16 +127,6 @@ optional true
 longname drape
 description is a text keyword to indicate that a particle is to be moved to the topmost active cell prior to release if its release point is in a cell that is dry at the scheduled time of release.  By default, a particle does not get released into the simulation if its release point is in a cell that is dry at the scheduled time of release.  ??? Move to what elevation within topmost active cell ???
 
-block options
-name outputevent
-type string
-shape
-reader urword
-tagged true
-optional true
-longname output event(s)
-description particle event(s) to record in output.  Can be ALL, RELEASE, TRANSIT, TIMESTEP, or WEAKSINK.
-
 # --------------------- prt prp dimensions ---------------------
 
 block dimensions

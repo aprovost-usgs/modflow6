@@ -215,7 +215,6 @@ def build_prt_sim(idx, ws, mf6):
     flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
 
     # create prp packages
-    event = get_output_event(name)
     flopy.mf6.ModflowPrtprp(
         prt,
         pname="prp_a",
@@ -223,7 +222,6 @@ def build_prt_sim(idx, ws, mf6):
         nreleasepts=len(releasepts_a),
         packagedata=releasepts_a,
         perioddata={0: ["FIRST"]},
-        outputevent=event,
     )
     flopy.mf6.ModflowPrtprp(
         prt,
@@ -232,15 +230,16 @@ def build_prt_sim(idx, ws, mf6):
         nreleasepts=len(releasepts_b),
         packagedata=releasepts_b,
         perioddata={0: ["FIRST"]},
-        outputevent=event,
     )
 
     # create output control package
+    event = get_output_event(name)
     flopy.mf6.ModflowPrtoc(
         prt,
         pname="oc",
         track_filerecord=[prt_track_file],
         trackcsv_filerecord=[prt_track_csv_file],
+        outputevent=event,
     )
 
     # create the flow model interface

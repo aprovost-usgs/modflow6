@@ -7,5 +7,4 @@ BEGIN OPTIONS
   [STOP_AT_WEAK_SINK]
   [ISTOPZONE <istopzone>]
   [DRAPE]
-  [OUTPUTEVENT <outputevent>]
 END OPTIONS

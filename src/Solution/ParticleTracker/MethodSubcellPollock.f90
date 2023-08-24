@@ -3,7 +3,7 @@ module MethodSubcellPollockModule
   use MethodModule
   use SubcellRectModule
   use ParticleModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
   private
   public :: MethodSubcellPollockType
@@ -56,7 +56,7 @@ contains
     ! -- dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     type(SubcellRectType), pointer :: subcellRect
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     ! -- Set pointer to subcell definition
     this%subcellRect => subcellRect

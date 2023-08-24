@@ -8,7 +8,7 @@ module MethodCellTernaryModule
   use SubcellTriModule
   use ParticleModule
   use Ternary
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
 
   private
@@ -78,7 +78,7 @@ contains
     class(MethodCellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellPolyType), pointer, intent(in) :: cellPoly
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     this%cellPoly => cellPoly
     !

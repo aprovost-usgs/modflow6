@@ -4,7 +4,7 @@ module MethodSubcellTernaryModule
   use MethodModule
   use SubcellTriModule
   use ParticleModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   use Ternary
   use TernaryUtil, only: rotate, skew
   use TernarySolveTrack, only: traverse_triangle, step_analytical, canonical
@@ -63,7 +63,7 @@ contains
     ! -- dummy
     class(MethodSubcellTernaryType), intent(inout) :: this
     type(SubcellTriType), pointer :: subcellTri
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     ! -- Set pointer to subcell definition
     this%subcellTri => subcellTri

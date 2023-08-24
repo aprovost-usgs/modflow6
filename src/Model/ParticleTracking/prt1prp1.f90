@@ -18,7 +18,7 @@ module PrtPrpModule
   use SimVariablesModule, only: errmsg, warnmsg
   use ArrayHandlersModule, only: expandarray
   use GlobalDataModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
 
   implicit none
 
@@ -50,7 +50,6 @@ module PrtPrpModule
     real(DP), dimension(:), pointer, contiguous :: tstop => null()
     character(len=LENBOUNDNAME), dimension(:), pointer, contiguous :: rptname &
                                                                       => null() !< release point name
-    integer(I4B), pointer :: ioutputevent !< output event recording option
     real(DP), dimension(:), pointer, contiguous :: massrls => null() !< mass released during time step
     integer(I4B), allocatable, dimension(:) :: kstp_list_rls !< allocatable time steps for releases in period
     integer(I4B), pointer :: ifreq_rls => null() !< release frequency (time steps) in period
@@ -61,7 +60,7 @@ module PrtPrpModule
     integer(I4B), pointer :: itrkout => null()
     integer(I4B), pointer :: itrkhdr => null()
     integer(I4B), pointer :: itrkcsv => null()
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
 
   contains
 
@@ -144,7 +143,6 @@ contains
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
     call mem_deallocate(this%nreleasepts)
-    call mem_deallocate(this%ioutputevent)
     call mem_deallocate(this%ifreq_rls)
     call mem_deallocate(this%rls_first)
     call mem_deallocate(this%rls_all)
@@ -183,7 +181,7 @@ contains
     class(PrtPrpType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     integer(I4B), dimension(:), pointer, contiguous :: izone
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     this%ibound => ibound
     this%izone => izone
@@ -255,7 +253,6 @@ contains
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
     call mem_allocate(this%nreleasepts, 'NRELEASEPTS', this%memoryPath)
-    call mem_allocate(this%ioutputevent, 'IOUTPUTEVENT', this%memoryPath)
     call mem_allocate(this%ifreq_rls, 'IFREQ_RLS', this%memoryPath)
     call mem_allocate(this%rls_first, 'RLS_FIRST', this%memoryPath)
     call mem_allocate(this%rls_all, 'RLS_ALL', this%memoryPath)
@@ -274,7 +271,6 @@ contains
     this%istopzone = 0
     this%idrape = 0
     this%nreleasepts = 0
-    this%ioutputevent = -1
     this%ifreq_rls = 0
     this%rls_first = .false.
     this%rls_all = .false.
@@ -439,7 +435,6 @@ contains
         this%partlist%trelease(np) = trelease
         this%partlist%tstop(np) = tstop
         this%partlist%ttrack(np) = trelease
-        this%partlist%ioutputevent(np) = this%ioutputevent
         this%partlist%istopweaksink(np) = this%istopweaksink
         this%partlist%istopzone(np) = this%istopzone
         this%partlist%irpt(np) = nps
@@ -744,7 +739,7 @@ contains
     use OpenSpecModule, only: access, form
     use ConstantsModule, only: MAXCHARLEN, DZERO
     use InputOutputModule, only: urword, getunit, openfile
-    use TrackDataModule, only: TRACKHEADERS, TRACKTYPES
+    use TrackModule, only: TRACKHEADERS, TRACKTYPES
     ! -- dummy
     class(PrtPrpType), intent(inout) :: this
     character(len=*), intent(inout) :: option
@@ -752,7 +747,6 @@ contains
     ! -- locals
     character(len=MAXCHARLEN) :: fname
     character(len=MAXCHARLEN) :: keyword
-    character(len=LINELENGTH) :: outputevent
     ! -- formats
     character(len=*), parameter :: fmttrkbin = &
       "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
@@ -814,31 +808,6 @@ contains
         call store_error('OPTIONAL TRACKCSV KEYWORD MUST BE &
           &FOLLOWED BY FILEOUT')
       end if
-      found = .true.
-    case ('OUTPUTEVENT')
-      call this%parser%GetStringCaps(outputevent)
-      select case (outputevent)
-      case ('')
-        this%ioutputevent = -1
-      case ('ALL')
-        this%ioutputevent = -1
-      case ('RELEASE')
-        this%ioutputevent = 0
-      case ('TRANSIT')
-        this%ioutputevent = 1
-      case ('TIMESTEP')
-        this%ioutputevent = 2
-      case ('TERMINATE')
-        this%ioutputevent = 3
-      case ('WEAKSINK')
-        this%ioutputevent = 4
-      case default
-        write (errmsg, '(2a)') &
-          'Looking for ALL, RELEASE, TRANSIT, TIMESTEP, &
-          &TERMINATE, or WEAKSINK. Found: ', &
-          trim(adjustl(outputevent))
-        call store_error(errmsg, terminate=.TRUE.)
-      end select
       found = .true.
     case default
       found = .false.

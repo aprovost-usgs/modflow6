@@ -1,4 +1,4 @@
-module TrackDataModule
+module TrackModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE
@@ -7,7 +7,7 @@ module TrackDataModule
   implicit none
 
   private save_internal
-  public :: TrackDataType
+  public :: TrackControlType
   public :: TrackFileType
 
   ! Types
@@ -22,22 +22,34 @@ module TrackDataModule
     integer(I4B) :: iprp = -1 ! prp 0 is reserved for exchange PRP
   end type TrackFileType
 
-  type :: TrackDataType
-    ! Handles saving particle tracks (pathlines) to binary/CSV output.
+  type :: TrackControlType
+    ! Manages file output for particle tracks (i.e. pathlines).
+    ! Writes particle pathlines to file, optionally filtering by
+    ! events of a given category, e.g. cell-to-cell transitions.
     ! Writes to 1 file of each kind, at each level, at a time. At most,
     ! this makes for 4. Kinds are: binary, csv. Levels are: model, prp.
 
-    ! model-level output files
-    type(TrackFileType) :: trackfile = TrackFileType()
-    type(TrackFileType) :: trackcsvfile = TrackFileType(csv=.true.)
+    ! -1: ALL
+    !  0: RELEASE
+    !  1: TRANSIT
+    !  2: TIMESTEP
+    !  3: TERMINATE
+    !  4: WEAKSINK
+    integer(I4B), public :: itrackevent
 
+    ! model-level output files
+    type(TrackFileType), public :: trackfile = TrackFileType()
+    type(TrackFileType), public :: trackcsvfile = TrackFileType(csv=.true.)
+    !
     ! PRP-level output files
-    type(TrackFileType) :: prptrackfile = TrackFileType()
-    type(TrackFileType) :: prptrackcsvfile = TrackFileType(csv=.true.)
+    type(TrackFileType), public :: prptrackfile = TrackFileType()
+    type(TrackFileType), public :: prptrackcsvfile = TrackFileType(csv=.true.)
+
   contains
     procedure, public :: init_track_file
     procedure, public :: save_record
-  end type TrackDataType
+    procedure, public :: set_track_event
+  end type TrackControlType
 
   ! Data model
 
@@ -97,25 +109,26 @@ module TrackDataModule
   !     8: permanently unreleased***
   !     9: terminated for unknown reason*
   !
-  !   * is this necessary?
-  !   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
-  !   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone
-  !
   !   ireason: the reason the record was reported
   !   -------
   !     0: particle released
   !     1: particle transitioned between cells
-  !     2: current time step ended
+  !     2: current time step ended****
   !     3: particle terminated
   !     4: particle exited weak sink
   !     ...
+  !
+  !   * is this necessary?
+  !   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
+  !   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone
+  !   **** this may coincide with termination, in which case two events are reported
 
 contains
 
   !> @brief Initialize the appropriate track file
   subroutine init_track_file(this, iun, csv, iprp)
     ! -- dummy
-    class(TrackDataType) :: this
+    class(TrackControlType) :: this
     integer(I4B), intent(in) :: iun
     logical(LGP), intent(in), optional :: csv
     integer(I4B), intent(in), optional :: iprp
@@ -153,7 +166,6 @@ contains
         this%trackfile%iun = iun
       end if
     end if
-
   end subroutine init_track_file
 
   subroutine save_internal(iun, particle, kper, kstp, reason, level, csv)
@@ -213,7 +225,6 @@ contains
         ymodel, &
         zmodel
     end if
-
   end subroutine
 
   !> @brief Save the particle's current state to output file(s).
@@ -225,20 +236,24 @@ contains
   !! model, or independently for particular release packages.
   subroutine save_record(this, particle, kper, kstp, reason, level)
     ! -- dummy
-    class(TrackDataType), intent(inout) :: this
+    class(TrackControlType), intent(inout) :: this
     type(ParticleType), pointer, intent(in) :: particle
     integer(I4B), intent(in) :: kper, kstp
     integer(I4B), intent(in) :: reason
     integer(I4B), intent(in), optional :: level
 
-    ! todo: ievent will be on package (or model??) instead of particle in future
-    ! -- Only save record if particle is configured for all events or
-    !    particle ievent matches provided reason for saving
-    if (particle%ioutputevent /= -1 .and. particle%ioutputevent /= reason) &
+    ! -- Only save if reporting is enabled for all events, or
+    !    if the specified event matches the reporting reason.
+    if (this%itrackevent > -1 .and. this%itrackevent /= reason) &
       return
 
-    ! -- If optional argument level is present and level isn't 3, return early
-    !    (kluge note: adds after each subcell-level track)
+    ! -- For now, only allow reporting from outside the tracking
+    !    algorithm (e.g. release time), in which case level will
+    !    not be provided, or if within the tracking solution, in
+    !    subcells (level 3) only. This may change if the subcell
+    !    ever needs to delegate to an even finer granularity, in
+    !    which case the tracking solution would recurse 1+ calls
+    !    deeper before advancing the particle and unwinding.
     if (present(level) .and. level .ne. 3) return
 
     ! save binary file(s) if enabled
@@ -258,7 +273,12 @@ contains
         call save_internal(this%prptrackcsvfile%iun, particle, &
                            kper, kstp, reason, level, csv=.true.)
     end if
-
   end subroutine save_record
 
-end module TrackDataModule
+  subroutine set_track_event(this, itrackevent)
+    class(TrackControlType) :: this
+    integer(I4B), intent(in) :: itrackevent
+    this%itrackevent = itrackevent
+  end subroutine set_track_event
+
+end module TrackModule

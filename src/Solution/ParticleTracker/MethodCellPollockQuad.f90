@@ -8,7 +8,7 @@ module MethodCellPollockQuadModule
   use SubcellRectModule
   use ParticleModule
   use UtilMiscModule
-  use TrackDataModule, only: TrackDataType
+  use TrackModule, only: TrackControlType
   implicit none
 
   private
@@ -69,7 +69,7 @@ contains
     class(MethodCellPollockQuadType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellRectQuadType), pointer, intent(in) :: cellRectQuad
-    type(TrackDataType), pointer :: trackdata
+    type(TrackControlType), pointer :: trackdata
     !
     ! -- Set pointer to cell definition
     this%cellRectQuad => cellRectQuad
