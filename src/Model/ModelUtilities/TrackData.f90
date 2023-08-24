@@ -70,6 +70,8 @@ module TrackDataModule
   ! responsible for the record. The user selects 1+ reporting conditions.
   ! Identical records (excepting ireason) may be duplicated if multiple
   ! reporting conditions apply to particles at the same moment in time.
+  ! Each ireason value corresponds to an outputevent option value in the
+  ! PRP (particle release point) package input file.
   !
   ! Particles have no ID property. Particles can be uniquely identified by
   ! composite key, i.e. combination of properties:
@@ -101,10 +103,11 @@ module TrackDataModule
   !
   !   ireason: the reason the record was reported
   !   -------
-  !     0: release
-  !     1: cross spatial boundary (e.g. cell,  subcell)
-  !     2: cross temporal boundary (e.g. time step end)
-  !     3: exited weak sink
+  !     0: particle released
+  !     1: particle transitioned between cells
+  !     2: current time step ended
+  !     3: particle terminated
+  !     4: particle exited weak sink
   !     ...
 
 contains
@@ -228,9 +231,11 @@ contains
     integer(I4B), intent(in) :: reason
     integer(I4B), intent(in), optional :: level
 
+    ! todo: ievent will be on package (or model??) instead of particle in future
     ! -- Only save record if particle is configured for all events or
     !    particle ievent matches provided reason for saving
-    if (.not. (particle%ievent == -1 .or. particle%ievent == reason)) return
+    if (particle%ioutputevent /= -1 .and. particle%ioutputevent /= reason) &
+      return
 
     ! -- If optional argument level is present and level isn't 3, return early
     !    (kluge note: adds after each subcell-level track)

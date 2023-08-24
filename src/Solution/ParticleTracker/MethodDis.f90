@@ -171,6 +171,7 @@ contains
     ! -- modules
     use InputOutputModule, only: get_ijk
     use GwfDisModule, only: GwfDisType
+    use TdisModule, only: kper, kstp
     ! -- dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -190,6 +191,8 @@ contains
       ! particle%iTrackingDomain(2) = -abs(particle%iTrackingDomain(2))   ! kluge???
       particle%istatus = 2 ! kluge note: use -2 to allow check for transfer to another model???
       particle%advancing = .false.
+      call this%trackdata%save_record(particle, kper=kper, &
+                                      kstp=kstp, reason=3) ! reason=3: termination
       ! particle%iTrackingDomainBoundary(2) = -1
     else
       idiag = this%fmi%dis%con%ia(this%cellRect%cellDefn%icell)

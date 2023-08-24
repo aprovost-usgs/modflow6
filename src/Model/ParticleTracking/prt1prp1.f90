@@ -50,7 +50,7 @@ module PrtPrpModule
     real(DP), dimension(:), pointer, contiguous :: tstop => null()
     character(len=LENBOUNDNAME), dimension(:), pointer, contiguous :: rptname &
                                                                       => null() !< release point name
-    integer(I4B), pointer :: ievent !< recording event option
+    integer(I4B), pointer :: ioutputevent !< output event recording option
     real(DP), dimension(:), pointer, contiguous :: massrls => null() !< mass released during time step
     integer(I4B), allocatable, dimension(:) :: kstp_list_rls !< allocatable time steps for releases in period
     integer(I4B), pointer :: ifreq_rls => null() !< release frequency (time steps) in period
@@ -144,7 +144,7 @@ contains
     call mem_deallocate(this%istopzone)
     call mem_deallocate(this%idrape)
     call mem_deallocate(this%nreleasepts)
-    call mem_deallocate(this%ievent)
+    call mem_deallocate(this%ioutputevent)
     call mem_deallocate(this%ifreq_rls)
     call mem_deallocate(this%rls_first)
     call mem_deallocate(this%rls_all)
@@ -255,7 +255,7 @@ contains
     call mem_allocate(this%istopzone, 'ISTOPZONE', this%memoryPath)
     call mem_allocate(this%idrape, 'IDRAPE', this%memoryPath)
     call mem_allocate(this%nreleasepts, 'NRELEASEPTS', this%memoryPath)
-    call mem_allocate(this%ievent, 'IEVENT', this%memoryPath)
+    call mem_allocate(this%ioutputevent, 'IOUTPUTEVENT', this%memoryPath)
     call mem_allocate(this%ifreq_rls, 'IFREQ_RLS', this%memoryPath)
     call mem_allocate(this%rls_first, 'RLS_FIRST', this%memoryPath)
     call mem_allocate(this%rls_all, 'RLS_ALL', this%memoryPath)
@@ -274,7 +274,7 @@ contains
     this%istopzone = 0
     this%idrape = 0
     this%nreleasepts = 0
-    this%ievent = -1
+    this%ioutputevent = -1
     this%ifreq_rls = 0
     this%rls_first = .false.
     this%rls_all = .false.
@@ -439,7 +439,7 @@ contains
         this%partlist%trelease(np) = trelease
         this%partlist%tstop(np) = tstop
         this%partlist%ttrack(np) = trelease
-        this%partlist%ievent(np) = this%ievent
+        this%partlist%ioutputevent(np) = this%ioutputevent
         this%partlist%istopweaksink(np) = this%istopweaksink
         this%partlist%istopzone(np) = this%istopzone
         this%partlist%irpt(np) = nps
@@ -752,7 +752,7 @@ contains
     ! -- locals
     character(len=MAXCHARLEN) :: fname
     character(len=MAXCHARLEN) :: keyword
-    character(len=LINELENGTH) :: event
+    character(len=LINELENGTH) :: outputevent
     ! -- formats
     character(len=*), parameter :: fmttrkbin = &
       "(4x, 'PARTICLE TRACKS WILL BE SAVED TO BINARY FILE: ', a, /4x, &
@@ -815,25 +815,28 @@ contains
           &FOLLOWED BY FILEOUT')
       end if
       found = .true.
-    case ('EVENT')
-      call this%parser%GetStringCaps(event)
-      select case (event)
+    case ('OUTPUTEVENT')
+      call this%parser%GetStringCaps(outputevent)
+      select case (outputevent)
       case ('')
-        this%ievent = -1
+        this%ioutputevent = -1
       case ('ALL')
-        this%ievent = -1
+        this%ioutputevent = -1
       case ('RELEASE')
-        this%ievent = 0
+        this%ioutputevent = 0
       case ('TRANSIT')
-        this%ievent = 1
+        this%ioutputevent = 1
       case ('TIMESTEP')
-        this%ievent = 2
+        this%ioutputevent = 2
+      case ('TERMINATE')
+        this%ioutputevent = 3
       case ('WEAKSINK')
-        this%ievent = 3
+        this%ioutputevent = 4
       case default
         write (errmsg, '(2a)') &
-          'Looking for ALL, RELEASE, TRANSIT, TIMESTEP, or WEAKSINK. Found: ', &
-          trim(adjustl(event))
+          'Looking for ALL, RELEASE, TRANSIT, TIMESTEP, &
+          &TERMINATE, or WEAKSINK. Found: ', &
+          trim(adjustl(outputevent))
         call store_error(errmsg, terminate=.TRUE.)
       end select
       found = .true.

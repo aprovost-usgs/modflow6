@@ -128,17 +128,30 @@ def check_budget_data(lst: os.PathLike, perlen, nper):
     assert all(en in names for en in expected_entries)
 
 
-def get_event(name):
+def get_output_event(case_name):
     return (
         "ALL"
-        if "all" in name
+        if "all" in case_name
         else "RELEASE"
-        if "rel" in name
+        if "rel" in case_name
         else "TRANSIT"
-        if "trst" in name
+        if "trst" in case_name
         else "TIMESTEP"
-        if "tstp" in name
+        if "tstp" in case_name
         else "WEAKSINK"
-        if "wksk" in name
+        if "wksk" in case_name
+        else "TERMINATE"
+        if "terminate" in case_name
         else "ALL" # default
+    )
+
+
+def get_ireason_code(output_event):
+    return (
+        0 if output_event == "RELEASE"
+        else 1 if output_event == "TRANSIT"
+        else 2 if output_event == "TIMESTEP"
+        else 3 if output_event == "TERMINATE"
+        else 4 if output_event == "WEAKSINK"
+        else -1 # default
     )

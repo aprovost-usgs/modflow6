@@ -150,8 +150,7 @@ contains
   !! Update the particle's properties (e.g. advancing flag, zone number,
   !! status). If any termination conditions apply, the particle's status
   !! will be set to the appropriate termination value. If any reporting
-  !! conditions apply, report the particle location with the appropriate
-  !! reason code.
+  !! conditions apply, save particle state with the proper reason code.
   subroutine update(this, particle, celldefn)
     ! -- modules
     use TdisModule, only: kper, kstp
@@ -159,27 +158,30 @@ contains
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellDefnType), pointer, intent(inout) :: celldefn
-    ! -- local
-    integer(I4B) :: reason
 
-    reason = -1
     particle%izone = celldefn%izone
 
     if (celldefn%izone .ne. 0) then
       if (particle%istopzone .eq. celldefn%izone) then
         particle%advancing = .false.
         particle%istatus = 6
+        call this%trackdata%save_record(particle, kper=kper, &
+                                        kstp=kstp, reason=3) ! reason=3: termination
       end if
     else if (celldefn%inoexitface .ne. 0) then
       particle%advancing = .false.
       particle%istatus = 5
-    else if (celldefn%iweaksink .ne. 0) then
-      reason = 3
       call this%trackdata%save_record(particle, kper=kper, &
-                                      kstp=kstp, reason=reason)
+                                      kstp=kstp, reason=3) ! reason=3: termination
+    else if (celldefn%iweaksink .ne. 0) then
       if (particle%istopweaksink .ne. 0) then
         particle%advancing = .false.
         particle%istatus = 3
+        call this%trackdata%save_record(particle, kper=kper, &
+                                        kstp=kstp, reason=3) ! reason=3: termination
+      else
+        call this%trackdata%save_record(particle, kper=kper, &
+                                        kstp=kstp, reason=4) ! reason=4: exited weak sink
       end if
     end if
 

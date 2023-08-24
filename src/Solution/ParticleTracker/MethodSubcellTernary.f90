@@ -90,6 +90,8 @@ contains
 
   !> @brief Track a particle across a triangular subcell using the ternary method
   subroutine track_sub(subcellTri, particle, tmax) ! kluge note: rename???
+    ! modules
+    use ParticleModule, only: get_particle_id
     ! dummy
     class(SubcellTriType), intent(in) :: subcellTri
     type(ParticleType), pointer, intent(inout) :: particle
@@ -188,7 +190,7 @@ contains
       ! kluge note: todo identify particle by "composite key" (not just irpt)
       print *, "======================================"
       print *, "Subcell with no exit face" ! kluge
-      print *, "Particle ", particle%irpt
+      print *, "Particle ", get_particle_id(particle)
       print *, "Cell ", particle%iTrackingDomain(2)
       print *, "======================================"
       !!pause

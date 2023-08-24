@@ -22,13 +22,13 @@ module ParticleModule
     integer(I4B), public :: ip ! index of particle in the particle list
     ! character(len=LENCOMPONENTNAME), public :: name = '' ! optional particle label (need not be unique)
 
-    ! recording event option:
     ! -1: ALL
     ! 0: RELEASE
     ! 1: TRANSIT
     ! 2: TIMESTEP
-    ! 3: WEAKSINK
-    integer(I4B), public :: ievent
+    ! 3: TERMINATE
+    ! 4: WEAKSINK
+    integer(I4B), public :: ioutputevent
 
     ! stop criteria
     integer(I4B), public :: istopweaksink ! weak sink option: 0 = do not stop, 1 = stop
@@ -76,13 +76,13 @@ module ParticleModule
     integer(I4B), dimension(:), pointer, contiguous :: irpt ! index of release point in the particle release package the particle originated in
     ! character(len=LENCOMPONENTNAME), dimension(:), pointer, contiguous :: name ! optional particle label
 
-    ! recording event option:
     ! -1: ALL
     ! 0: RELEASE
     ! 1: TRANSIT
     ! 2: TIMESTEP
-    ! 3: WEAKSINK
-    integer(I4B), dimension(:), pointer, contiguous :: ievent
+    ! 3: TERMINATE
+    ! 4: WEAKSINK
+    integer(I4B), dimension(:), pointer, contiguous :: ioutputevent
 
     ! stopping criteria
     integer(I4B), dimension(:), pointer, contiguous :: istopweaksink ! weak sink option: 0 = do not stop, 1 = stop
@@ -161,7 +161,7 @@ contains
     call mem_allocate(this%trelease, np, 'PLTRELEASE', mempath)
     call mem_allocate(this%tstop, np, 'PLTSTOP', mempath)
     call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
-    call mem_allocate(this%ievent, np, 'PLIEVENT', mempath)
+    call mem_allocate(this%ioutputevent, np, 'PLIOUTPUTEVENT', mempath)
     call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
     !
@@ -192,7 +192,7 @@ contains
     call mem_deallocate(this%trelease, 'PLTRELEASE', mempath)
     call mem_deallocate(this%tstop, 'PLTSTOP', mempath)
     call mem_deallocate(this%ttrack, 'PLTTRACK', mempath)
-    call mem_deallocate(this%ievent, 'PLIEVENT', mempath)
+    call mem_deallocate(this%ioutputevent, 'PLIOUTPUTEVENT', mempath)
     call mem_deallocate(this%istopweaksink, 'PLISTOPWEAKSINK', mempath)
     call mem_deallocate(this%istopzone, 'PLISTOPZONE', mempath)
     !
@@ -224,7 +224,7 @@ contains
     call mem_reallocate(this%trelease, np, 'PLTRELEASE', mempath)
     call mem_reallocate(this%tstop, np, 'PLTSTOP', mempath)
     call mem_reallocate(this%ttrack, np, 'PLTTRACK', mempath)
-    call mem_reallocate(this%ievent, np, 'PLIEVENT', mempath)
+    call mem_reallocate(this%ioutputevent, np, 'PLIOUTPUTEVENT', mempath)
     call mem_reallocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
     call mem_reallocate(this%istopzone, np, 'PLISTOPZONE', mempath)
     !
@@ -259,7 +259,7 @@ contains
     this%irpt = partlist%irpt(ip) ! kluge note: necessary to reset this here?
     this%ip = ip
     ! this%name = partlist%name(ip)
-    this%ievent = partlist%ievent(ip)
+    this%ioutputevent = partlist%ioutputevent(ip)
     this%istopweaksink = partlist%istopweaksink(ip)
     this%istopzone = partlist%istopzone(ip)
     this%iTrackingDomain(levelMin:levelMax) = &

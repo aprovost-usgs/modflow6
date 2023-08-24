@@ -108,6 +108,8 @@ contains
   !!
   !<
   subroutine track_sub(subcellRect, particle, tmax) ! kluge note: rename???
+    ! modules
+    use ParticleModule, only: get_particle_id
     ! dummy
     class(SubcellRectType), intent(in) :: subcellRect
     type(ParticleType), pointer, intent(inout) :: particle
@@ -149,10 +151,10 @@ contains
       ! particle%istatus = 5
       ! return
 
-      ! kluge note: todo identify particle by "composite key" (not just irpt)
+      ! kluge note: contact the developer situation
       print *, "======================================"
       print *, "Subcell with no exit face" ! kluge
-      print *, "Particle ", particle%irpt
+      print *, "Particle ", get_particle_id(particle)
       print *, "Cell ", particle%iTrackingDomain(2)
       print *, "======================================"
       !!pause
