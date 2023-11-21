@@ -1317,12 +1317,15 @@ contains
     real(DP), dimension(this%nbrmax, 3) :: vc, vn, vcm
     real(DP), dimension(this%nbrmax) :: dl, dln, vkr
     real(DP), dimension(3, 3) :: ck, ckjj
+    real(DP), dimension(3, 3) :: emmat, emmatjj, wk
+    real(DP) :: determ
     ! -- local
     integer(I4B) :: il, ii, jj, jjs
     integer(I4B) :: ihcnjj
     real(DP) :: satn, satjj
     real(DP) :: ckvn1, ckvn2, ckvn3, ckjjvn1, ckjjvn2, ckjjvn3, ckappa, ckappajj
     real(DP) :: cl1njj, cl2njj, dltot, ooclsum, dlfrac, dlnfrac
+    real(DP) :: dum1, dum2   ! kluge debug
 ! ------------------------------------------------------------------------------
     !
     ! -- Set conductivity tensor for cell.
@@ -1387,19 +1390,86 @@ contains
         ! -- Calculate modified connection vector for exact heterogeneity
         ! -- correction.
         ckjj = DZERO
-        ckjj(1, 1) = DONE / this%k11(jj)
-        ckjj(2, 2) = DONE / this%k22(jj)
-        ckjj(3, 3) = DONE / this%k33(jj)
+        ckjj(1, 1) = this%k11(jj)
+        ckjj(2, 2) = this%k22(jj)
+        ckjj(3, 3) = this%k33(jj)
         call this%xt3d_fillrmatck(jj)
         ckjj = matmul(this%rmatck, ckjj)
         ckjj = matmul(ckjj, transpose(this%rmatck))
-        ckjj = matmul(ckjj, ck)*dlnfrac
-        ckjj(1, 1) = ckjj(1, 1) + dlfrac
-        ckjj(2, 2) = ckjj(2, 2) + dlfrac
-        ckjj(3, 3) = ckjj(3, 3) + dlfrac
-        vcm(il,1) = ckjj(1,1)*vc(il,1) + ckjj(1,2)*vc(il,2) + ckjj(1,3)*vc(il,3)
-        vcm(il,2) = ckjj(2,1)*vc(il,1) + ckjj(2,2)*vc(il,2) + ckjj(2,3)*vc(il,3)
-        vcm(il,3) = ckjj(3,1)*vc(il,1) + ckjj(3,2)*vc(il,2) + ckjj(3,3)*vc(il,3)
+        ckvn1 = ck(1,1)*vn(il,1) + ck(1,2)*vn(il,2) + ck(1,3)*vn(il,3)
+        ckvn2 = ck(2,1)*vn(il,1) + ck(2,2)*vn(il,2) + ck(2,3)*vn(il,3)
+        ckvn3 = ck(3,1)*vn(il,1) + ck(3,2)*vn(il,2) + ck(3,3)*vn(il,3)
+        ckjjvn1 = ckjj(1,1)*vn(il,1) + ckjj(1,2)*vn(il,2) + ckjj(1,3)*vn(il,3)
+        ckjjvn2 = ckjj(2,1)*vn(il,1) + ckjj(2,2)*vn(il,2) + ckjj(2,3)*vn(il,3)
+        ckjjvn3 = ckjj(3,1)*vn(il,1) + ckjj(3,2)*vn(il,2) + ckjj(3,3)*vn(il,3)
+        ckvn1 = ck(1,1)*vn(il,1) + ck(1,2)*vn(il,2) + ck(1,3)*vn(il,3)
+        ckvn2 = ck(2,1)*vn(il,1) + ck(2,2)*vn(il,2) + ck(2,3)*vn(il,3)
+        ckvn3 = ck(3,1)*vn(il,1) + ck(3,2)*vn(il,2) + ck(3,3)*vn(il,3)
+        ckjjvn1 = ckjj(1,1)*vn(il,1) + ckjj(1,2)*vn(il,2) + ckjj(1,3)*vn(il,3)
+        ckjjvn2 = ckjj(2,1)*vn(il,1) + ckjj(2,2)*vn(il,2) + ckjj(2,3)*vn(il,3)
+        ckjjvn3 = ckjj(3,1)*vn(il,1) + ckjj(3,2)*vn(il,2) + ckjj(3,3)*vn(il,3)
+        emmat(1,1) = ckvn1
+        emmat(1,2) = ckvn2
+        emmat(1,3) = ckvn3
+        emmatjj(1,1) = ckjjvn1
+        emmatjj(1,2) = ckjjvn2
+        emmatjj(1,3) = ckjjvn3
+        if (ihcnjj.eq.0) then
+          ! -- Vertical connection, so horizontal interface
+          emmat(2,1) = 1d0
+          emmat(2,2) = 0d0
+          emmat(2,3) = 0d0
+          emmat(3,1) = 0d0
+          emmat(3,2) = 1d0
+          emmat(3,3) = 0d0
+          emmatjj(2,1) = 1d0
+          emmatjj(2,2) = 0d0
+          emmatjj(2,3) = 0d0
+          emmatjj(3,1) = 0d0
+          emmatjj(3,2) = 1d0
+          emmatjj(3,3) = 0d0
+        else
+          ! -- Horizontal connection, so vertical interface
+          emmat(2,1) = -vn(il,2)
+          emmat(2,2) = vn(il,1)
+          emmat(2,3) = 0d0
+          emmat(3,1) = 0d0
+          emmat(3,2) = 0d0
+          emmat(3,3) = 1d0
+          emmatjj(2,1) = -vn(il,2)
+          emmatjj(2,2) = vn(il,1)
+          emmatjj(2,3) = 0d0
+          emmatjj(3,1) = 0d0
+          emmatjj(3,2) = 0d0
+          emmatjj(3,3) = 1d0
+        end if
+        wk(1,1) = emmatjj(2,2)*emmatjj(3,3)-emmatjj(2,3)*emmatjj(3,2)
+        wk(1,2) = -emmatjj(2,1)*emmatjj(3,3)+emmatjj(2,3)*emmatjj(3,1)
+        wk(1,3) = emmatjj(2,1)*emmatjj(3,2)-emmatjj(2,2)*emmatjj(3,1)
+        wk(2,1) = -emmatjj(1,2)*emmatjj(3,3)+emmatjj(1,3)*emmatjj(3,2)
+        wk(2,2) = emmatjj(1,1)*emmatjj(3,3)-emmatjj(1,3)*emmatjj(3,1)
+        wk(2,3) = -emmatjj(1,1)*emmatjj(3,2)+emmatjj(1,2)*emmatjj(3,1)
+        wk(3,1) = emmatjj(1,2)*emmatjj(2,3)-emmatjj(1,3)*emmatjj(2,2)
+        wk(3,2) = -emmatjj(1,1)*emmatjj(2,3)+emmatjj(1,3)*emmatjj(2,1)
+        wk(3,3) = emmatjj(1,1)*emmatjj(2,2)-emmatjj(1,2)*emmatjj(2,1)
+        determ = + emmatjj(1,1)*emmatjj(2,2)*emmatjj(3,3) &
+          - emmatjj(1,1)*emmatjj(2,3)*emmatjj(3,2)        &
+          - emmatjj(1,2)*emmatjj(2,1)*emmatjj(3,3)        &
+          + emmatjj(1,2)*emmatjj(2,3)*emmatjj(3,1)        &
+          + emmatjj(1,3)*emmatjj(2,1)*emmatjj(3,2)        &
+          - emmatjj(1,3)*emmatjj(2,2)*emmatjj(3,1)
+        emmatjj = transpose(wk)/determ
+        emmat = matmul(emmatjj, emmat)
+!!        wk = matmul(wk, ck)*dlnfrac
+        wk = emmat*dlnfrac
+        wk(1, 1) = wk(1, 1) + dlfrac
+        wk(2, 2) = wk(2, 2) + dlfrac
+        wk(3, 3) = wk(3, 3) + dlfrac
+        vcm(il,1) = wk(1,1)*vc(il,1) + wk(2,1)*vc(il,2) + wk(3,1)*vc(il,3)
+        vcm(il,2) = wk(1,2)*vc(il,1) + wk(2,2)*vc(il,2) + wk(3,2)*vc(il,3)
+        vcm(il,3) = wk(1,3)*vc(il,1) + wk(2,3)*vc(il,2) + wk(3,3)*vc(il,3)
+        dum1 = this%k11(n)    ! kluge debug
+        dum2 = this%k11(jj)   ! kluge debug
         if (this%dis%con%ihc(jjs) .eq. 0) allhc = .false.
       else
         inbr(il) = 0

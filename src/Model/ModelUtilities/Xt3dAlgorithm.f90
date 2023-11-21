@@ -476,6 +476,8 @@ contains
     integer(I4B) :: nde1
     real(DP), dimension(nnbrmx, 3) :: vccde
     real(DP), dimension(nnbrmx, 3) :: vcmcde
+    real(DP), dimension(3) :: vcmcdemag
+    real(DP), dimension(nnbrmx, 3) :: vcmcdeu
     real(DP) :: vcthresh
     real(DP), dimension(nnbrmx) :: dl0
     real(DP), dimension(nnbrmx) :: dln
@@ -507,18 +509,26 @@ contains
     do il = 1, nnbr
 !........if this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
+      vcmcdemag(il) = dsqrt(vcmcde(il, 1) * vcmcde(il, 1) &
+                          + vcmcde(il, 2) * vcmcde(il, 2) &
+                          + vcmcde(il, 3) * vcmcde(il, 3))
+      vcmcdeu(il,:) = vcmcde(il,:) / vcmcdemag(il)
       vcmx = max(dabs(vccde(il, nde1)), vcmx)
+!!      vcmx = max(dabs(vcmcdeu(il, nde1)), vcmx)
       dlm = 5d-1 * (dl0(il) + dln(il))
 !...........Distance-based weighting.  dl4wt is the distance between
 !              the point supplying the gradient information and the
-!              point at which the flux is being estimated.  Could be
-!              coded as a special case of resistance-based weighting
-!              (by setting the conductivity matrix to be the identity
-!              matrix), but this is more efficient.
+!!!              point at which the flux is being estimated.  Could be
+!!!              coded as a special case of resistance-based weighting
+!!!              (by setting the conductivity matrix to be the identity
+!!!              matrix), but this is more efficient.
+!              point at which the flux is being estimated.
       cosang = vccde(il, 1)
+!!      cosang = vccdeu(il, 1)
       dl4wt = dsqrt(dlm * dlm + dl0(il01) * dl0(il01) &
                     - 2d0 * dlm * dl0(il01) * cosang)
-      omwt(il) = dabs(vccde(il, nde1)) * dl4wt
+!!      omwt(il) = dabs(vccde(il, nde1)) * dl4wt
+      omwt(il) = dabs(vcmcdeu(il, nde1)) * dl4wt
       dsum = dsum + omwt(il)
     end do
 !
@@ -531,8 +541,8 @@ contains
 !........If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
       fact = dsum - omwt(il)
-!!!      omwt(il) = fact * dabs(vccde(il, nde1))
-      omwt(il) = fact * dabs(vcmcde(il, nde1))
+!!      omwt(il) = fact * dabs(vccde(il, nde1))
+      omwt(il) = fact * dabs(vcmcdeu(il, nde1))
     end do
 !
 !.....Compute "b" weights.
@@ -543,8 +553,8 @@ contains
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
 !!!      bd(il) = omwt(il) * sign(1d0, vccde(il, nde1))
 !!!      dsum = dsum + omwt(il) * dabs(vccde(il, nde1))
-      bd(il) = omwt(il) * sign(1d0, vcmcde(il, nde1))
-      dsum = dsum + omwt(il) * dabs(vcmcde(il, nde1))
+      bd(il) = omwt(il) * sign(1d0, vcmcdeu(il, nde1)) / vcmcdemag(il)
+      dsum = dsum + omwt(il) * dabs(vcmcdeu(il, nde1))
     end do
     oodsum = 1d0 / dsum
     do il = 1, nnbr
@@ -562,8 +572,8 @@ contains
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
 !!!      acd = acd + bd(il) * vccde(il, 1)
 !!!      aed = aed + bd(il) * vccde(il, nde2)
-      acd = acd + bd(il) * vcmcde(il, 1)
-      aed = aed + bd(il) * vcmcde(il, nde2)
+      acd = acd + bd(il) * vcmcdeu(il, 1)
+      aed = aed + bd(il) * vcmcdeu(il, nde2)
     end do
 !
 !.....Apply attenuation function to acd, aed, and bd.
