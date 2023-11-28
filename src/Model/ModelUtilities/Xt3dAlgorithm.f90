@@ -476,7 +476,7 @@ contains
     integer(I4B) :: nde1
     real(DP), dimension(nnbrmx, 3) :: vccde
     real(DP), dimension(nnbrmx, 3) :: vcmcde
-    real(DP), dimension(3) :: vcmcdemag
+    real(DP), dimension(nnbrmx) :: vcmcdemag
     real(DP), dimension(nnbrmx, 3) :: vcmcdeu
     real(DP) :: vcthresh
     real(DP), dimension(nnbrmx) :: dl0

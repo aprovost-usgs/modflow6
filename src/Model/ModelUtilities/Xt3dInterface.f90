@@ -1325,7 +1325,7 @@ contains
     real(DP) :: satn, satjj
     real(DP) :: ckvn1, ckvn2, ckvn3, ckjjvn1, ckjjvn2, ckjjvn3, ckappa, ckappajj
     real(DP) :: cl1njj, cl2njj, dltot, ooclsum, dlfrac, dlnfrac
-    real(DP) :: dum1, dum2   ! kluge debug
+    real(DP) :: dum1, dum2, vnkluge1, vnkluge2, vnkluge3   ! kluge debug
 ! ------------------------------------------------------------------------------
     !
     ! -- Set conductivity tensor for cell.
@@ -1370,7 +1370,7 @@ contains
         dl(il) = dltot * dlfrac
         dln(il) = dltot * dlnfrac
         ! -- Calculate conductivity ratio for approximate heterogeneity
-        ! -- correction.
+        ! -- correction.    ! kluge note: remove approx correction
         ckjj = DZERO
         ckjj(1, 1) = this%k11(jj)
         ckjj(2, 2) = this%k22(jj)
@@ -1388,7 +1388,7 @@ contains
         ckappajj = dsqrt(ckjjvn1*ckjjvn1 + ckjjvn2*ckjjvn2 + ckjjvn3*ckjjvn3)
         vkr(il) = ckappa/ckappajj
         ! -- Calculate modified connection vector for exact heterogeneity
-        ! -- correction.
+        ! -- correction. Start by setting up conductivity tensors.
         ckjj = DZERO
         ckjj(1, 1) = this%k11(jj)
         ckjj(2, 2) = this%k22(jj)
@@ -1396,6 +1396,7 @@ contains
         call this%xt3d_fillrmatck(jj)
         ckjj = matmul(this%rmatck, ckjj)
         ckjj = matmul(ckjj, transpose(this%rmatck))
+        ! -- Set up cell and neighbor contributions to refraction matrix
         ckvn1 = ck(1,1)*vn(il,1) + ck(1,2)*vn(il,2) + ck(1,3)*vn(il,3)
         ckvn2 = ck(2,1)*vn(il,1) + ck(2,2)*vn(il,2) + ck(2,3)*vn(il,3)
         ckvn3 = ck(3,1)*vn(il,1) + ck(3,2)*vn(il,2) + ck(3,3)*vn(il,3)
@@ -1408,6 +1409,26 @@ contains
         ckjjvn1 = ckjj(1,1)*vn(il,1) + ckjj(1,2)*vn(il,2) + ckjj(1,3)*vn(il,3)
         ckjjvn2 = ckjj(2,1)*vn(il,1) + ckjj(2,2)*vn(il,2) + ckjj(2,3)*vn(il,3)
         ckjjvn3 = ckjj(3,1)*vn(il,1) + ckjj(3,2)*vn(il,2) + ckjj(3,3)*vn(il,3)
+        
+        ! kluge debug
+        if (.false.) then !if (this%k11(jj).ne.this%k11(n)) then
+        vnkluge1 = -dsqrt(2d0)/2d0
+        vnkluge2 = 0d0 
+        vnkluge3 = dsqrt(2d0)/2d0
+        ckvn1 = ck(1,1)*vnkluge1 + ck(1,2)*vnkluge2 + ck(1,3)*vnkluge3
+        ckvn2 = ck(2,1)*vnkluge1 + ck(2,2)*vnkluge2 + ck(2,3)*vnkluge3
+        ckvn3 = ck(3,1)*vnkluge1 + ck(3,2)*vnkluge2 + ck(3,3)*vnkluge3
+        ckjjvn1 = ckjj(1,1)*vnkluge1 + ckjj(1,2)*vnkluge2 + ckjj(1,3)*vnkluge3
+        ckjjvn2 = ckjj(2,1)*vnkluge1 + ckjj(2,2)*vnkluge2 + ckjj(2,3)*vnkluge3
+        ckjjvn3 = ckjj(3,1)*vnkluge1 + ckjj(3,2)*vnkluge2 + ckjj(3,3)*vnkluge3
+        ckvn1 = ck(1,1)*vnkluge1 + ck(1,2)*vnkluge2 + ck(1,3)*vnkluge3
+        ckvn2 = ck(2,1)*vnkluge1 + ck(2,2)*vnkluge2 + ck(2,3)*vnkluge3
+        ckvn3 = ck(3,1)*vnkluge1 + ck(3,2)*vnkluge2 + ck(3,3)*vnkluge3
+        ckjjvn1 = ckjj(1,1)*vnkluge1 + ckjj(1,2)*vnkluge2 + ckjj(1,3)*vnkluge3
+        ckjjvn2 = ckjj(2,1)*vnkluge1 + ckjj(2,2)*vnkluge2 + ckjj(2,3)*vnkluge3
+        ckjjvn3 = ckjj(3,1)*vnkluge1 + ckjj(3,2)*vnkluge2 + ckjj(3,3)*vnkluge3
+        end if
+        
         emmat(1,1) = ckvn1
         emmat(1,2) = ckvn2
         emmat(1,3) = ckvn3
@@ -1443,31 +1464,50 @@ contains
           emmatjj(3,2) = 0d0
           emmatjj(3,3) = 1d0
         end if
-        wk(1,1) = emmatjj(2,2)*emmatjj(3,3)-emmatjj(2,3)*emmatjj(3,2)
-        wk(1,2) = -emmatjj(2,1)*emmatjj(3,3)+emmatjj(2,3)*emmatjj(3,1)
-        wk(1,3) = emmatjj(2,1)*emmatjj(3,2)-emmatjj(2,2)*emmatjj(3,1)
-        wk(2,1) = -emmatjj(1,2)*emmatjj(3,3)+emmatjj(1,3)*emmatjj(3,2)
-        wk(2,2) = emmatjj(1,1)*emmatjj(3,3)-emmatjj(1,3)*emmatjj(3,1)
-        wk(2,3) = -emmatjj(1,1)*emmatjj(3,2)+emmatjj(1,2)*emmatjj(3,1)
-        wk(3,1) = emmatjj(1,2)*emmatjj(2,3)-emmatjj(1,3)*emmatjj(2,2)
-        wk(3,2) = -emmatjj(1,1)*emmatjj(2,3)+emmatjj(1,3)*emmatjj(2,1)
-        wk(3,3) = emmatjj(1,1)*emmatjj(2,2)-emmatjj(1,2)*emmatjj(2,1)
-        determ = + emmatjj(1,1)*emmatjj(2,2)*emmatjj(3,3) &
-          - emmatjj(1,1)*emmatjj(2,3)*emmatjj(3,2)        &
-          - emmatjj(1,2)*emmatjj(2,1)*emmatjj(3,3)        &
-          + emmatjj(1,2)*emmatjj(2,3)*emmatjj(3,1)        &
-          + emmatjj(1,3)*emmatjj(2,1)*emmatjj(3,2)        &
-          - emmatjj(1,3)*emmatjj(2,2)*emmatjj(3,1)
-        emmatjj = transpose(wk)/determ
+        
+        ! kluge debug
+        if (.false.) then !(this%k11(jj).ne.this%k11(n)) then   ! kluge note: assumes vnkluge2 = 0d0
+          emmat(2,1) = -vnkluge3
+          emmat(2,2) = 0d0
+          emmat(2,3) = vnkluge1
+          emmat(3,1) = 0d0
+          emmat(3,2) = 1d0
+          emmat(3,3) = 0d0
+          emmatjj(2,1) = -vnkluge3
+          emmatjj(2,2) = 0d0
+          emmatjj(2,3) = vnkluge1
+          emmatjj(3,1) = 0d0
+          emmatjj(3,2) = 1d0
+          emmatjj(3,3) = 0d0
+        end if
+        
+        ! -- Invert neighbor contribution to refraction matrix
+        wk(1,1) = +emmatjj(2,2)*emmatjj(3,3)-emmatjj(2,3)*emmatjj(3,2)
+        wk(1,2) = -emmatjj(1,2)*emmatjj(3,3)+emmatjj(1,3)*emmatjj(3,2)
+        wk(1,3) = +emmatjj(2,1)*emmatjj(2,3)-emmatjj(1,3)*emmatjj(2,2)
+        wk(2,1) = -emmatjj(2,1)*emmatjj(3,3)+emmatjj(2,3)*emmatjj(3,1)
+        wk(2,2) = +emmatjj(1,1)*emmatjj(3,3)-emmatjj(1,3)*emmatjj(3,1)
+        wk(2,3) = -emmatjj(1,1)*emmatjj(2,3)+emmatjj(1,3)*emmatjj(2,1)
+        wk(3,1) = +emmatjj(2,1)*emmatjj(3,2)-emmatjj(2,2)*emmatjj(3,1)
+        wk(3,2) = -emmatjj(1,1)*emmatjj(3,2)+emmatjj(1,2)*emmatjj(3,1)
+        wk(3,3) = +emmatjj(1,1)*emmatjj(2,2)-emmatjj(1,2)*emmatjj(2,1)
+        determ = + emmatjj(1,1)*(emmatjj(2,2)*emmatjj(3,3)  &
+                               - emmatjj(3,2)*emmatjj(2,3)) &
+                 - emmatjj(2,1)*(emmatjj(1,2)*emmatjj(3,3)  &
+                               - emmatjj(3,2)*emmatjj(1,3)) &
+                 + emmatjj(3,1)*(emmatjj(1,2)*emmatjj(2,3)  &
+                               - emmatjj(2,2)*emmatjj(1,3))
+        emmatjj = wk / determ
+        ! -- Multiply neighbor and cell contributions to get refraction matrix
         emmat = matmul(emmatjj, emmat)
-!!        wk = matmul(wk, ck)*dlnfrac
-        wk = emmat*dlnfrac
+        ! -- Construct modified connection vector
+        wk = transpose(emmat)*dlnfrac
         wk(1, 1) = wk(1, 1) + dlfrac
         wk(2, 2) = wk(2, 2) + dlfrac
         wk(3, 3) = wk(3, 3) + dlfrac
-        vcm(il,1) = wk(1,1)*vc(il,1) + wk(2,1)*vc(il,2) + wk(3,1)*vc(il,3)
-        vcm(il,2) = wk(1,2)*vc(il,1) + wk(2,2)*vc(il,2) + wk(3,2)*vc(il,3)
-        vcm(il,3) = wk(1,3)*vc(il,1) + wk(2,3)*vc(il,2) + wk(3,3)*vc(il,3)
+        vcm(il,1) = wk(1,1)*vc(il,1) + wk(1,2)*vc(il,2) + wk(1,3)*vc(il,3)
+        vcm(il,2) = wk(2,1)*vc(il,1) + wk(2,2)*vc(il,2) + wk(2,3)*vc(il,3)
+        vcm(il,3) = wk(3,1)*vc(il,1) + wk(3,2)*vc(il,2) + wk(3,3)*vc(il,3)
         dum1 = this%k11(n)    ! kluge debug
         dum2 = this%k11(jj)   ! kluge debug
         if (this%dis%con%ihc(jjs) .eq. 0) allhc = .false.
