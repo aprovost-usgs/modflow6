@@ -1466,7 +1466,7 @@ contains
         end if
         
         ! kluge debug
-        if (.false.) then !(this%k11(jj).ne.this%k11(n)) then   ! kluge note: assumes vnkluge2 = 0d0
+        if (.false.) then !if (this%k11(jj).ne.this%k11(n)) then   ! kluge note: assumes vnkluge2 = 0d0
           emmat(2,1) = -vnkluge3
           emmat(2,2) = 0d0
           emmat(2,3) = vnkluge1

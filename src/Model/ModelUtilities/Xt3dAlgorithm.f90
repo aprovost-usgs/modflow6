@@ -527,8 +527,8 @@ contains
 !!      cosang = vccdeu(il, 1)
       dl4wt = dsqrt(dlm * dlm + dl0(il01) * dl0(il01) &
                     - 2d0 * dlm * dl0(il01) * cosang)
-!!      omwt(il) = dabs(vccde(il, nde1)) * dl4wt
-      omwt(il) = dabs(vcmcdeu(il, nde1)) * dl4wt
+      omwt(il) = dabs(vccde(il, nde1)) * dl4wt
+!!      omwt(il) = dabs(vcmcdeu(il, nde1)) * dl4wt
       dsum = dsum + omwt(il)
     end do
 !
@@ -541,8 +541,8 @@ contains
 !........If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
       fact = dsum - omwt(il)
-!!      omwt(il) = fact * dabs(vccde(il, nde1))
-      omwt(il) = fact * dabs(vcmcdeu(il, nde1))
+      omwt(il) = fact * dabs(vccde(il, nde1))
+!!      omwt(il) = fact * dabs(vcmcdeu(il, nde1))
     end do
 !
 !.....Compute "b" weights.
@@ -569,11 +569,13 @@ contains
     aed = 0d0
     do il = 1, nnbr
 !........If this is connection (0,1) or inactive, skip.
-      if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
+    if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
 !!!      acd = acd + bd(il) * vccde(il, 1)
 !!!      aed = aed + bd(il) * vccde(il, nde2)
-      acd = acd + bd(il) * vcmcdeu(il, 1)
-      aed = aed + bd(il) * vcmcdeu(il, nde2)
+!!      acd = acd + bd(il) * vcmcdeu(il, 1)
+!!      aed = aed + bd(il) * vcmcdeu(il, nde2)
+      acd = acd + bd(il) * vcmcde(il, 1)
+      aed = aed + bd(il) * vcmcde(il, nde2)
     end do
 !
 !.....Apply attenuation function to acd, aed, and bd.
