@@ -1326,6 +1326,7 @@ contains
     real(DP) :: ckvn1, ckvn2, ckvn3, ckjjvn1, ckjjvn2, ckjjvn3, ckappa, ckappajj
     real(DP) :: cl1njj, cl2njj, dltot, ooclsum, dlfrac, dlnfrac
     real(DP) :: dum1, dum2, vnkluge1, vnkluge2, vnkluge3, jcoln, jcoljj   ! kluge debug
+    real(DP) :: znn, znjj, zrep, zlo, zhi, dzlo, dzhi, zint, dzrep, dzb, dza, term, dltwo, dlntwo, vcxn, vczn, vcxp, vczp  ! kluge debug???
     real(DP), dimension(3) :: vcn, vcp   ! kluge debug???
     logical :: anglekluge, plankluge, twoconnkluge  ! kluge debug
 ! ------------------------------------------------------------------------------
@@ -1412,12 +1413,12 @@ contains
         ckjjvn2 = ckjj(2,1)*vn(il,1) + ckjj(2,2)*vn(il,2) + ckjj(2,3)*vn(il,3)
         ckjjvn3 = ckjj(3,1)*vn(il,1) + ckjj(3,2)*vn(il,2) + ckjj(3,3)*vn(il,3)
         
-        !kluge debug
+        !kluge test option flags
         anglekluge = .true.
         plankluge = .false.
         twoconnkluge = .true.
         
-        ! kluge debug
+        ! kluge for fake angle
         if (anglekluge) then
           jcoln = modulo(n,21)
           jcoljj = modulo(jj,21)
@@ -1427,8 +1428,9 @@ contains
             vnkluge1 = -dsqrt(2d0)/2d0
             vnkluge2 = 0d0 
             vnkluge3 = dsqrt(2d0)/2d0
+            ! sub-kluge for plan model
             if (plankluge) then
-              vnkluge1 = -dsqrt(2d0)/2d0    ! kluge note: for plan model
+              vnkluge1 = -dsqrt(2d0)/2d0
               vnkluge2 = dsqrt(2d0)/2d0 
               vnkluge3 = 0d0
             end if
@@ -1447,12 +1449,14 @@ contains
           end if
         end if
 
+        ! kluge default initialization for two-connection vector formulation
         vcn(1) = vc(il,1)
         vcn(2) = vc(il,2)
         vcn(3) = vc(il,3)
         vcp(1) = vc(il,1)
         vcp(2) = vc(il,2)
         vcp(3) = vc(il,3)
+        
         emmat(1,1) = ckvn1
         emmat(1,2) = ckvn2
         emmat(1,3) = ckvn3
@@ -1475,17 +1479,35 @@ contains
           emmat(3,1) = 0d0
           emmat(3,2) = 0d0
           emmat(3,3) = 1d0
-          ! kluge for two-connection-vector formula
+          
+          ! kluge for two-connection-vector formulation; done for xsec model only
+          if (twoconnkluge.and.(.not.plankluge)) then
           if (this%k11(jj).ne.this%k11(n)) then
-            vcn(1) = vc(il,1)
-            vcn(2) = vc(il,2)  ! kluge temp debug
-            vcn(3) = vc(il,3)
-            vcp(1) = vc(il,1)
-            vcp(2) = vc(il,2)
-            vcp(3) = vc(il,3)
-            dlnfrac = dlnfrac
-            dlfrac = dlfrac
+            znn = 5d-1*(this%dis%top(n) + this%dis%bot(n))   ! kluge note: assumes saturated
+            znjj = 5d-1*(this%dis%top(jj) + this%dis%bot(jj))
+            if (znn .ne. znjj) then
+              zint = dlnfrac*znn + dlfrac*znjj
+              zhi = min(this%dis%top(n), this%dis%top(jj))
+              zlo = max(this%dis%bot(n), this%dis%bot(jj))
+              zrep = 5d-1*(zhi + zlo)  ! kluge note: in general, what to do if zhi < zlo (no overlap)?
+              vcxn = sign(cl1njj, vc(il,1))
+              vczn = zrep - znn
+              dltwo = dsqrt(vcxn*vcxn + vczn*vczn)
+              dlfrac = dltwo/dltot
+              vcn(1) = vcxn/dltwo
+              vcn(2) = 0d0
+              vcn(3) = vczn/dltwo
+              vcxp = sign(cl2njj, vc(il,1))
+              vczp = znjj - zrep
+              dlntwo = dsqrt(vcxp*vcxp + vczp*vczp)
+              dlnfrac = dlntwo/dltot    ! kluge note: dlfrac and dlnfrac do not necessarily sum to 1
+              vcp(1) = vcxp/dlntwo
+              vcp(2) = 0d0
+              vcp(3) = vczp/dlntwo
+            end if
           end if
+          end if
+          
         end if
         emmatjj(2,1) = emmat(2,1)
         emmatjj(2,2) = emmat(2,2)
@@ -1494,7 +1516,7 @@ contains
         emmatjj(3,2) = emmat(3,2)
         emmatjj(3,3) = emmat(3,3)
         
-        ! kluge debug
+        ! kluge for fake angle
         if (anglekluge) then
           if ((this%k11(jj).ne.this%k11(n)).and. &
               ((jcoln.le.21).or.(jcoln.ge.1).or. &
@@ -1505,8 +1527,9 @@ contains
             emmat(3,1) = 0d0
             emmat(3,2) = 1d0
             emmat(3,3) = 0d0
+            ! sub-kluge for plan model
             if (plankluge) then
-              emmat(2,1) = -vnkluge2    ! kluge note: for plan model
+              emmat(2,1) = -vnkluge2
               emmat(2,2) = vnkluge1
               emmat(2,3) = 0d0
               emmat(3,1) = 0d0
@@ -1549,15 +1572,13 @@ contains
         !vcm(il,1) = wk(1,1)*vc(il,1) + wk(1,2)*vc(il,2) + wk(1,3)*vc(il,3)
         !vcm(il,2) = wk(2,1)*vc(il,1) + wk(2,2)*vc(il,2) + wk(2,3)*vc(il,3)
         !vcm(il,3) = wk(3,1)*vc(il,1) + wk(3,2)*vc(il,2) + wk(3,3)*vc(il,3)
-        ! kluge for two-connection-vector formula; works for one also
+        ! kluge for two-connection-vector formula; with appropriate initialization works for one also
         vcm(il,1) = wk(1,1)*vcp(1) + wk(1,2)*vcp(2) + wk(1,3)*vcp(3)
         vcm(il,2) = wk(2,1)*vcp(1) + wk(2,2)*vcp(2) + wk(2,3)*vcp(3)
         vcm(il,3) = wk(3,1)*vcp(1) + wk(3,2)*vcp(2) + wk(3,3)*vcp(3)
         vcm(il,1) = vcm(il,1) + dlfrac*vcn(1)
         vcm(il,2) = vcm(il,2) + dlfrac*vcn(2)
         vcm(il,3) = vcm(il,3) + dlfrac*vcn(3)
-        dum1 = this%k11(n)    ! kluge debug
-        dum2 = this%k11(jj)   ! kluge debug
         if (this%dis%con%ihc(jjs) .eq. 0) allhc = .false.
       else
         inbr(il) = 0
