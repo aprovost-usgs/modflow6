@@ -210,8 +210,11 @@ contains
       ! particle%iboundary(3) = exitFace
       ! particle%istatus = 5
       ! return
+      ! particle%advancing = .false.
+      ! call this%save(particle, reason=3)
+      ! return
 
-      ! contact the developer situation (for now? always?)
+      ! contact the developer situation (for now? always?)    ! kluge note: good question
       print *, "Subcell with no exit face: particle", get_particle_id(particle), &
         "cell", particle%idomain(2)
       call pstop(1)
