@@ -631,6 +631,9 @@ contains
       term = DONE / (cell%defn%retfactor * cell%defn%porosity * areacell)
       this%vzbot = cell%defn%faceflow(this%nverts + 2) * term
       this%vztop = -cell%defn%faceflow(this%nverts + 3) * term
+            
+      this%vzbot = -this%vzbot     ! kluge: temporarily compensating for ccw ordering
+      this%vztop = -this%vztop     ! kluge: temporarily compensating for ccw ordering
 
       ! Deallocate local arrays
       deallocate (le)
