@@ -519,8 +519,8 @@ contains
       allocate (xmid(this%nverts))         ! x coordinates of midpoints
       allocate (ymid(this%nverts))         ! y coordinates of midpoints
       allocate (lm(this%nverts))           ! lengths of midpoint connectors
-      allocate (umx(this%nverts))          ! x components of midpoint-connector (ccw) unit vectors
-      allocate (umy(this%nverts))          ! y components of midpoint-connector (ccw) unit vectors
+      allocate (umx(this%nverts))          ! x components of midpoint-connector (cw) unit vectors
+      allocate (umy(this%nverts))          ! y components of midpoint-connector (cw) unit vectors
       allocate (kappax(this%nverts))       ! x components of kappa vectors
       allocate (kappay(this%nverts))       ! y components of kappa vectors
 !      allocate (vm0i(this%nverts))         ! component of vm0 normal to the interior edge it's on
@@ -542,15 +542,15 @@ contains
       wk1 = this%xvertnext - this%xvert
       wk2 = this%yvertnext - this%yvert
       le = dsqrt(wk1 * wk1 + wk2 * wk2)
-      unex = wk2 / le
-      uney = -wk1 / le
+      unex = -wk2 / le
+      uney = wk1 / le
   
       ! Cell area
       areacell = areapoly(this%xvert, this%yvert)
       
       ! Cell centroid   ! kluge note: in general, this is NOT the average of the vertex coordinates
       sixa = areacell * 6.d0
-      wk1 = this%xvert * this%yvertnext - this%xvertnext * this%yvert
+      wk1 = -(this%xvert * this%yvertnext - this%xvertnext * this%yvert)
       this%xctr = sum((this%xvert + this%xvertnext) * wk1) / sixa
       this%yctr = sum((this%yvert + this%yvertnext) * wk1) / sixa
   
@@ -565,21 +565,21 @@ contains
         areasub(i) = areapoly(xvals, yvals)
       end do
       
-      ! Cell-edge normal velocities
+      ! Cell-edge normal velocities (outward)
       term = DONE / (cell%defn%porosity * cell%defn%retfactor * this%dz)
       do i = 1, this%nverts
-        this%vne(i) = cell%defn%faceflow(i) * term / le(i)
+        this%vne(i) = -cell%defn%faceflow(i) * term / le(i)
       end do
   
       ! Cell divergence (2D)
       divcell = sum(le * this%vne) / areacell
   
-      ! Interior edge (ccw) unit normals and lengths
+      ! Interior edge (cw) unit normals and lengths
       wk1 = this%xvert - this%xctr
       wk2 = this%yvert - this%yctr
       li = dsqrt(wk1 * wk1 + wk2 * wk2)
-      unix = -wk2 / li
-      uniy = wk1 / li
+      unix = wk2 / li
+      uniy = -wk1 / li
       ! Shifted arrays for convenience
       unixnext = cshift(unix, 1)
       uniynext = cshift(uniy, 1)
@@ -588,7 +588,7 @@ contains
       xmid = 5.d-1 * (this%xvert + this%xctr)
       ymid = 5.d-1 * (this%yvert + this%yctr)
       
-      ! Unit midpoint-connector (ccw) vectors and lengths
+      ! Unit midpoint-connector (cw) vectors and lengths
       wk1 = cshift(xmid, 1) - xmid
       wk2 = cshift(ymid, 1) - ymid
       lm = dsqrt(wk1 * wk1 + wk2 * wk2)
@@ -620,7 +620,7 @@ contains
                                 kappax, kappay, vm0x, vm0y, vm1x, vm1y, hcsum)
           
       ! Project linearly to get corner (vertex) velocities. Note that velocity
-      ! vv1 is at the next vertex ccw from vv0, so vv0(i) and vv1(i) are the
+      ! vv1 is at the next vertex cw from vv0, so vv0(i) and vv1(i) are the
       ! two vertex velocities used by triangular subcell i.
       this%vv0x = 2.d0 * vm0x - this%vctrx
       this%vv0y = 2.d0 * vm0y - this%vctry
@@ -632,9 +632,6 @@ contains
       this%vzbot = cell%defn%faceflow(this%nverts + 2) * term
       this%vztop = -cell%defn%faceflow(this%nverts + 3) * term
             
-      this%vzbot = -this%vzbot     ! kluge: temporarily compensating for ccw ordering
-      this%vztop = -this%vztop     ! kluge: temporarily compensating for ccw ordering
-
       ! Deallocate local arrays
       deallocate (le)
       deallocate (unex)
@@ -820,7 +817,8 @@ function areapoly(xv, yv) result(area)   ! kluge note: should this be packaged w
     ! result
     double precision               :: area
 
-    area = 5.d-1 * sum(xv(:) * cshift(yv(:), 1) - cshift(xv(:), 1) * yv(:))
+    ! Assumes cw ordering of vertices
+    area = -5.d-1 * sum(xv(:) * cshift(yv(:), 1) - cshift(xv(:), 1) * yv(:))
 
 end function areapoly
 
