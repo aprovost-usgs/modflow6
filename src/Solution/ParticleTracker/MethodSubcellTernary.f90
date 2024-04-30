@@ -170,6 +170,10 @@ contains
     vzbot = subcell%vzbot
     vztop = subcell%vztop
 
+    if (subcell%icell == 811) then
+      print *, "cell 811"
+    end if
+
     ! -- Translate and rotate coordinates to "canonical" configuration
     call canonical(x0, y0, x1, y1, x2, y2, &
                    v0x, v0y, v1x, v1y, v2x, v2y, &

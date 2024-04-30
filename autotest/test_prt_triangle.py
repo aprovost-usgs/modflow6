@@ -174,20 +174,23 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets):
         (0, (0, 88), 95, 92, 0.5),
         (1, (0, 86), 96, 86, 0.5),
     ]
-    prp_track_file = f"{prtname}.prp.trk"
-    prp_track_csv_file = f"{prtname}.prp.trk.csv"
-    flopy.mf6.ModflowPrtprp(
-        prt,
-        pname="prp1",
-        filename=f"{prtname}_1.prp",
-        nreleasepts=len(prpdata),
-        packagedata=prpdata,
-        perioddata={0: ["FIRST"]},
-        track_filerecord=[prp_track_file],
-        trackcsv_filerecord=[prp_track_csv_file],
-        boundnames=True,
-        stop_at_weak_sink=True,  # currently required for this problem
-    )
+    # set up 2 PRPs, identical except for the dev
+    # option toggling new vs old vertex velocity
+    # calculation. we expect both approaches to
+    # return approximately identical results.
+    for i in range(2):
+        flopy.mf6.ModflowPrtprp(
+            prt,
+            pname=f"prp{i}",
+            filename=f"{prtname}_{i}.prp",
+            nreleasepts=len(prpdata),
+            packagedata=prpdata,
+            perioddata={0: ["FIRST"]},
+            boundnames=True,
+            stop_at_weak_sink=True,  # currently required for this problem
+            dev_vvorig=i == 1,  # temp dev option, todo: remove later
+            # dev_forceternary=tern,  # temp dev option, todo: remove later
+        )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"
     flopy.mf6.ModflowPrtoc(
@@ -248,13 +251,9 @@ def check_output(idx, test):
 
     # get prt output
     prt_name = get_model_name(name, "prt")
-    prt_track_csv_file = f"{prt_name}.prp.trk.csv"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-    endpts = (
-        pls.sort_values("t")
-        .groupby(["imdl", "iprp", "irpt", "trelease"])
-        .tail(1)
-    )
+    endpts = pls[pls.ireason == 3]  # termination
 
     plot_debug = False
     if plot_debug:
@@ -273,7 +272,7 @@ def check_output(idx, test):
                 y="y",
                 ax=ax,
                 legend=False,
-                color="blue",
+                color="red" if iprp == 1 else "blue",
             )
         grid = gwf.modelgrid
         xc, yc = grid.get_xcellcenters_for_layer(
@@ -286,7 +285,7 @@ def check_output(idx, test):
         plt.show()
 
     if "r2l" in name:
-        assert pls.shape == (82, 16)
+        assert pls.shape == (164, 16)
         assert (pls.z == 0.5).all()
         rtol = 1e-6
         assert isclose(min(pls.x), 0, rel_tol=rtol)
@@ -297,9 +296,21 @@ def check_output(idx, test):
         assert isclose(max(pls[pls.irpt == 2].y), 86, rel_tol=rtol)
         assert set(endpts.icell) == {130, 136}
     elif "diag" in name:
-        assert pls.shape == (116, 16)
-        assert endpts.shape == (2, 16)
+        assert pls.shape == (232, 16)
+        assert endpts.shape == (4, 16)
         assert set(endpts.icell) == {111, 112}
+
+    # pathlines should be (very nearly) identical for both
+    # vertex velocity calculation approaches
+    pls_prp1 = pls[pls.iprp == 1].drop(["iprp", "name"], axis=1).round(8)
+    pls_prp2 = (
+        pls[pls.iprp == 2]
+        .drop(["iprp", "name"], axis=1)
+        .round(8)
+        .reset_index(drop=True)
+    )
+    diff = pls_prp1.compare(pls_prp2)
+    assert not any(diff), diff
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

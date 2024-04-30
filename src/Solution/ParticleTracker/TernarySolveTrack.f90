@@ -2,6 +2,7 @@ module TernarySolveTrack
 
   use KindModule, only: I4B, DP, LGP
   use GeomUtilModule, only: skew
+  use ConstantsModule, only: DPREC
   use MathUtilModule, only: f1d, zero_ch, zero_br, zero_test
   use ErrorUtilModule, only: pstop
 
@@ -189,6 +190,10 @@ contains
     cv0 = matmul(rot, (/v0x, v0y/))
     cv1 = matmul(rot, (/v1x, v1y/))
     cv2 = matmul(rot, (/v2x, v2y/))
+
+    if (x0 == 1760 .or. x0 == 1952) then
+      print *, "cv0(2) is zero"
+    end if
 
     xidiff = xi - x0
     yidiff = yi - y0
@@ -668,9 +673,15 @@ contains
     real(DP) :: term
     real(DP) :: zerotol
 
+    if (cb2 == 0.0_DP) then
+      print *, "cb2 == 0.0, nudging"
+      cb2 = DPREC
+    end if
+
     ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
     zerotol = 1d-10 ! kluge
     term = (bet - cb1) / cb2
+
     if (icase .eq. 1) then
       term = max(term, zerotol)
       t = dlog(term) / wbb
