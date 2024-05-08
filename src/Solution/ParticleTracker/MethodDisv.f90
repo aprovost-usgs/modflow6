@@ -95,8 +95,8 @@ contains
         submethod => method_cell_ptb
       else
         ! -- Select and initialize cell method and set cell method pointer
-        if (particle%ifrctrn > 0) then     ! kluge note: devoption for now
-           call method_cell_tern%init( &
+        if (particle%ifrctrn > 0) then ! kluge note: devoption for now
+          call method_cell_tern%init( &
             cell=this%cell, &
             trackfilectl=this%trackfilectl, &
             tracktimes=this%tracktimes)
@@ -689,7 +689,7 @@ contains
     real(DP) :: s0x
     real(DP) :: s0y
     real(DP) :: &
-      s0mag, s2x, s2y, s2mag, sinang, dotprod
+      s0mag, s2x, s2y, s2mag, sinang, cosang, dotprod
     logical(LGP) last180
 
     ic = defn%icell
@@ -737,6 +737,7 @@ contains
       s2y = y2 - y1
       s2mag = dsqrt(s2x * s2x + s2y * s2y)
       sinang = (s0x * s2y - s0y * s2x) / (s0mag * s2mag)
+      cosang = dsqrt(1d0 - (sinang * sinang))
       ! kluge note: is it better to check in terms of angle rather than sin{angle}???
       if (dabs(sinang) .lt. epsang) then
         dotprod = s0x * s2x + s0y * s2y
@@ -764,7 +765,8 @@ contains
         end if
       else if (sinang .gt. 0d0) then
         numacute = numacute + 1
-        if (dabs(1d0 - sinang) .lt. epsang) num90 = num90 + 1
+        ! criterion below based on Taylor series expansion of sin(angle - pi/2)
+        if (dsqrt(2d0 * (1d0 - cosang)) .lt. epsang) num90 = num90 + 1
         last180 = .false.
       else
         print *, "Cell ", ic, &

@@ -191,10 +191,6 @@ contains
     cv1 = matmul(rot, (/v1x, v1y/))
     cv2 = matmul(rot, (/v2x, v2y/))
 
-    if (x0 == 1760 .or. x0 == 1952) then
-      print *, "cv0(2) is zero"
-    end if
-
     xidiff = xi - x0
     yidiff = yi - y0
     res = matmul(rot, (/xidiff, yidiff/))
@@ -214,7 +210,7 @@ contains
       res = (/alpi, beti/)
       res = skew(res, (/sxx, sxy, syy/))
       alpi = res(1)
-      beti = res(2)     ! kluge note: tiny negative beti led to tiny negative texit in test_prt_triangle with iflowface=1
+      beti = res(2) ! kluge note: tiny negative beti led to tiny negative texit in test_prt_triangle with iflowface=1
     end if
 
   end subroutine
@@ -749,7 +745,21 @@ contains
     ! -- local
     real(DP) :: betlim
 
-    if (wbb .gt. 0d0) then
+    if (icase > 2) then
+      if (cv0(2) .gt. 0d0) then
+        betsolhi = huge(1d0)
+        betsollo = beti
+        ibettrend = 1
+      else if (cv0(2) .lt. 0d0) then
+        betsolhi = beti
+        betsollo = -huge(1d0)
+        ibettrend = -1
+      else
+        betsolhi = beti
+        betsollo = beti
+        ibettrend = 0
+      end if
+    else if (wbb .gt. 0d0) then
       betlim = -cv0(2) / wbb
       if (beti .gt. betlim) then
         betsolhi = huge(1d0)
@@ -774,20 +784,6 @@ contains
         betsolhi = betlim
         betsollo = beti
         ibettrend = 1
-      else
-        betsolhi = beti
-        betsollo = beti
-        ibettrend = 0
-      end if
-    else ! kluge note: use zerotol and elsewhere?
-      if (cv0(2) .gt. 0d0) then
-        betsolhi = huge(1d0)
-        betsollo = beti
-        ibettrend = 1
-      else if (cv0(2) .lt. 0d0) then
-        betsolhi = beti
-        betsollo = -huge(1d0)
-        ibettrend = -1
       else
         betsolhi = beti
         betsollo = beti
