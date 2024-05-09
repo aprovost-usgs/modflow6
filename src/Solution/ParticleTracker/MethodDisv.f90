@@ -29,7 +29,6 @@ module MethodDisvModule
     procedure, public :: map_neighbor ! maps a location on the cell face to the shared face of a neighbor
     procedure, public :: pass => pass_disv ! passes the particle to the next cell
     procedure, private :: get_npolyverts ! returns the number of polygon vertices for a cell in the grid
-    procedure, private :: get_top ! returns top elevation based on index iatop
     procedure, private :: load_nbrs_to_defn ! loads face neighbors to a cell object
     procedure, private :: load_flags_to_defn ! loads 180-degree vertex indicator to a cell object
     procedure, private :: load_flows_to_defn ! loads flows to a cell object
@@ -83,9 +82,9 @@ contains
     select type (cell => this%cell)
     type is (CellPolyType)
       ! load cell definition
-      ic = particle%idomain(next_level) ! kluge note: is cell number always known coming in?
+      ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
-      if (this%fmi%ibdgwfsat0(ic) == 0) then ! kluge note: use cellDefn%sat == DZERO here instead?
+      if (this%fmi%ibdgwfsat0(ic) == 0) then
         ! -- Cell is active but dry, so select and initialize pass-to-bottom
         ! -- cell method and set cell method pointer
         call method_cell_ptb%init( &
@@ -95,7 +94,7 @@ contains
         submethod => method_cell_ptb
       else
         ! -- Select and initialize cell method and set cell method pointer
-        if (particle%ifrctrn > 0) then ! kluge note: devoption for now
+        if (particle%ifrctrn > 0) then
           call method_cell_tern%init( &
             cell=this%cell, &
             trackfilectl=this%trackfilectl, &
@@ -158,18 +157,14 @@ contains
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
           ! -- Exterior face; no neighbor to map to
-          ! particle%idomain(1) = 0
-          ! particle%idomain(2) = 0   ! kluge note: "has_exited" attribute instead???
-          ! particle%idomain(1) = -abs(particle%idomain(1))   ! kluge???
-          ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
-          particle%istatus = 2 ! kluge note, todo: use -2 to check for transfer to another model???
+          ! todo, later on: reconsider when multiple models are allowed
+          particle%istatus = 2
           particle%advancing = .false.
           call this%save(particle, reason=3) ! reason=3: termination
-          ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
           ipos = idiag + inbr
-          ic = dis%con%ja(ipos) ! kluge note, todo: use PRT model's DIS instead of fmi's??
+          ic = dis%con%ja(ipos)
           particle%idomain(2) = ic
 
           ! compute and set user node number and layer on particle
@@ -221,17 +216,18 @@ contains
 
     ! -- Map to shared cell face of neighbor
     inbr = defn%facenbr(inface)
-    if (inbr .eq. 0) then ! kluge note: redundant check
+    if (inbr .eq. 0) then
       ! -- Exterior face; no neighbor to map to
-      inface = -1 ! kluge???
+      ! todo AMP: reconsider when multiple models allowed
+      inface = -1
     else
       ! -- Load definition for neighbor cell (neighbor with shared face)
       icin = defn%icell
       j = this%fmi%dis%con%ia(icin)
       ic = this%fmi%dis%con%ja(j + inbr)
       call create_defn(cd)
-      ! kluge note: really only need to load facenbr and npolyverts for this
-      call this%load_cell_defn(ic, cd) ! kluge
+      ! todo, before initial release: really only need to load facenbr and npolyverts for this
+      call this%load_cell_defn(ic, cd)
       npolyvertsin = defn%npolyverts
       npolyverts = cd%npolyverts
       if (inface .eq. npolyvertsin + 2) then
@@ -243,7 +239,6 @@ contains
       else
         ! -- Exits and enters through shared polygon face
         j = this%fmi%dis%con%ia(ic)
-        ! kluge note: use shared_edge in DisvGeom to find shared polygon face???
         do m = 1, npolyverts + 3
           inbrnbr = cd%facenbr(m)
           if (this%fmi%dis%con%ja(j + inbrnbr) .eq. icin) then
@@ -255,7 +250,6 @@ contains
         topfrom = defn%top
         botfrom = defn%bot
         zrel = (z - botfrom) / (topfrom - botfrom)
-        ! kluge note: use PRT model's DIS instead of fmi's???
         top = this%fmi%dis%top(ic)
         bot = this%fmi%dis%bot(ic)
         sat = this%fmi%gwfsat(ic)
@@ -270,10 +264,12 @@ contains
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
-    call this%track(particle, 1, tmax) ! kluge, hardwired to level 1
+    call this%track(particle, 1, tmax)
   end subroutine apply_disv
 
   !> @brief Return the number of polygon vertices for a cell in the grid
+  !! todo, after initial release: is this necessary? can we just use
+  !! size of array returned by get_polyverts()
   function get_npolyverts(this, ic) result(npolyverts)
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
@@ -289,27 +285,11 @@ contains
     type is (DisvType)
       ncpl = dis%get_ncpl()
       icu = dis%get_nodeuser(ic)
-      icu2d = icu - ((icu - 1) / ncpl) * ncpl ! kluge note: use MOD or MODULO???
+      icu2d = icu - ((icu - 1) / ncpl) * ncpl
       npolyverts = dis%iavert(icu2d + 1) - dis%iavert(icu2d) - 1
-      if (npolyverts .le. 0) npolyverts = npolyverts + size(dis%javert) ! kluge???
+      if (npolyverts .le. 0) npolyverts = npolyverts + size(dis%javert)
     end select
   end function get_npolyverts
-
-  !> @brief Get top elevation based on index iatop
-  !! kluge note: not needed???
-  function get_top(this, iatop) result(top)
-    ! -- dummy
-    class(MethodDisvType), intent(inout) :: this
-    integer(I4B), intent(in) :: iatop
-    ! -- result
-    real(DP) :: top
-
-    if (iatop .lt. 0) then
-      top = this%fmi%dis%top(-iatop)
-    else
-      top = this%fmi%dis%bot(iatop)
-    end if
-  end function get_top
 
   !> @brief Load cell definition from the grid
   subroutine load_cell_defn(this, ic, defn)
@@ -399,7 +379,9 @@ contains
       istop1 = dis%iavert(j1 + 1) - 1
       do iloc = 1, dis%con%ia(ic1 + 1) - dis%con%ia(ic1) - 1
         ipos = dis%con%ia(ic1) + iloc
-        if (dis%con%mask(ipos) == 0) cycle ! kluge note: need mask here???
+        ! todo: ask before initial release... when is mask used
+        ! and do we have to consider it?
+        if (dis%con%mask(ipos) == 0) cycle
         ic2 = dis%con%ja(ipos)
         icu2 = dis%get_nodeuser(ic2)
         call get_jk(icu2, ncpl, dis%nlay, j2, k2)
@@ -438,7 +420,7 @@ contains
   !! ivlist2 as a clockwise face in cell1 must correspond to a
   !! counter clockwise face in cell2.
   !!
-  !! kluge note: based on DisvGeom shared_edge
+  !! This is based on DisvGeom shared_edge, todo: generalize? after initial release
   !<
   subroutine shared_edgeface(ivlist1, ivlist2, iedgeface)
     integer(I4B), dimension(:) :: ivlist1
@@ -503,7 +485,7 @@ contains
     call this%load_boundary_flows_to_defn_poly(defn)
     ! -- Set inoexitface flag
     defn%inoexitface = 1
-    do m = 1, npolyverts + 3 ! kluge note: can be streamlined with above code
+    do m = 1, npolyverts + 3
       if (defn%faceflow(m) < 0d0) defn%inoexitface = 0
     end do
 
@@ -534,11 +516,10 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! kluge note - assignment of BoundaryFlows to faceflow below assumes vertex 1
+    ! assignment of BoundaryFlows to faceflow below assumes vertex 1
     ! is at upper left of rectangular cell, and BoundaryFlows use old iface order
-    ! ioffset = (ic - 1)*6
+    ! todo AMP: determine whether old iface order is actually used
     ioffset = (ic - 1) * 10
-    ! kluge note: should these be additive (seems so)???
     defn%faceflow(1) = defn%faceflow(1) + &
                        this%fmi%BoundaryFlows(ioffset + 4)
     defn%faceflow(2) = defn%faceflow(2) + &
@@ -573,14 +554,14 @@ contains
     integer(I4B) :: m2
     integer(I4B) :: mdiff
     real(DP) :: qbf
-    integer(I4B) :: irectvert(5) ! kluge
+    integer(I4B) :: irectvert(5)
 
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! kluge note - assignment of BoundaryFlows to faceflow below assumes vertex 1
+    ! assignment of BoundaryFlows to faceflow below assumes vertex 1
     ! is at upper left of rectangular cell, and BoundaryFlows use old iface order
-    ! ioffset = (ic - 1)*6
+    ! todo AMP: determine whether old iface order is actually used
     ioffset = (ic - 1) * 10
     ! -- Polygon faces in positions 1 through npolyverts
     do n = 1, 4
@@ -592,14 +573,15 @@ contains
         nbf = n
       end if
       qbf = this%fmi%BoundaryFlows(ioffset + nbf)
-      nn = 0 ! kluge ...
+      nn = 0
+      ! todo AMP: what is going on
       do m = 1, npolyverts
         if (.not. defn%ispv180(m)) then
           nn = nn + 1
           irectvert(nn) = m
         end if
       end do
-      irectvert(5) = irectvert(1) ! ... kluge
+      irectvert(5) = irectvert(1)
       m1 = irectvert(n)
       m2 = irectvert(n + 1)
       if (m2 .lt. m1) m2 = m2 + npolyverts
@@ -643,10 +625,9 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! kluge note: hardwired for max 8 polygon faces plus top and bottom for now
+    ! todo before initial release: make max poly faces a constant and use here and elsewhere
     ioffset = (ic - 1) * 10
     do iv = 1, npolyverts
-      ! kluge note: should these be additive (seems so)???
       defn%faceflow(iv) = &
         defn%faceflow(iv) + &
         this%fmi%BoundaryFlows(ioffset + iv)
@@ -662,9 +643,9 @@ contains
   end subroutine load_boundary_flows_to_defn_poly
 
   !> @brief Load 180-degree vertex indicator array and set flags
-  !! indicating how cell can be represented (kluge: latter needed?).
+  !! indicating how cell can be represented.
   !! Assumes cell index and number of vertices are already loaded.
-  subroutine load_flags_to_defn(this, defn) ! kluge note: rename???
+  subroutine load_flags_to_defn(this, defn)
     ! -- dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellDefnType), pointer, intent(inout) :: defn
@@ -685,7 +666,6 @@ contains
     real(DP) :: x2
     real(DP) :: y2
     real(DP) :: epsang
-    real(DP) :: epslen
     real(DP) :: s0x
     real(DP) :: s0y
     real(DP) :: &
@@ -704,14 +684,12 @@ contains
     defn%ispv180(1:npolyverts + 1) = .false.
     defn%can_be_rect = .false.
     defn%can_be_quad = .false.
-    epsang = 1d-3 ! kluge hardwire, and using one value for all angles
-    epslen = 1d-3 ! kluge hardwire
+    epsang = 1d-3 ! todo AMP: consider
     num90 = 0
     num180 = 0
     numacute = 0
     last180 = .false.
-    ! kluge note: assumes non-self-intersecting polygon;
-    ! no checks for self-intersection (e.g., star)
+    ! assumes non-self-intersecting polygon
     do m = 1, npolyverts
       m1 = m
       if (m1 .eq. 1) then
@@ -738,52 +716,35 @@ contains
       s2mag = dsqrt(s2x * s2x + s2y * s2y)
       sinang = (s0x * s2y - s0y * s2x) / (s0mag * s2mag)
       cosang = dsqrt(1d0 - (sinang * sinang))
-      ! kluge note: is it better to check in terms of angle rather than sin{angle}???
+      ! todo AMP: consider this approach
       if (dabs(sinang) .lt. epsang) then
         dotprod = s0x * s2x + s0y * s2y
         if (dotprod .gt. 0d0) then
-          print *, "Cell ", ic, " has a zero angle" ! kluge
+          ! todo before initial release: store error and terminate simulation
+          print *, "Cell ", ic, " has a zero angle"
           print *, "      (tolerance epsang = ", epsang, ")"
           call pstop(1)
         else
-          if (last180) then
-            print *, "Cell ", ic, &
-              " has consecutive 180-deg angles - not supported" ! kluge
-            print *, "      (tolerance epsang = ", epsang, ")"
-            call pstop(1)
-          else if (dabs((s2mag - s0mag) / max(s2mag, s0mag)) .gt. epslen) then
-            print *, "Cell ", ic, &
-              " has a non-bisecting 180-deg vertex - not supported" ! kluge
-            print *, "      (tolerance epslen = ", epslen, ")"
-            call pstop(1)
-          end if
-          ! kluge note: want to evaluate 180-deg vertex using one criterion implemented in
-          ! one place (procedure) to avoid potential disparities between multiple checks
           num180 = num180 + 1
           last180 = .true.
           defn%ispv180(m) = .true.
         end if
       else if (sinang .gt. 0d0) then
         numacute = numacute + 1
-        ! criterion below based on Taylor series expansion of sin(angle - pi/2)
-        if (dsqrt(2d0 * (1d0 - cosang)) .lt. epsang) num90 = num90 + 1
+        if (dabs(cosang) .lt. epsang) num90 = num90 + 1
         last180 = .false.
       else
+        ! todo before initial release: store error and terminate sim
         print *, "Cell ", ic, &
-          " has an obtuse angle and so is nonconvex" ! kluge
+          " has an obtuse angle and so is nonconvex"
         print *, "      (tolerance epsang = ", epsang, ")"
         call pstop(1)
       end if
     end do
-    if ((num90 .ne. 4) .and. (num180 .ne. 0)) then
-      print *, "Cell ", ic, &
-        " is a non-rectangle with a 180-deg angle - not supported" ! kluge
-      print *, "      (tolerance epsang = ", epsang, ")"
-      call pstop(1)
-    end if
+
     ! -- List of 180-degree indicators wraps around for convenience
     defn%ispv180(npolyverts + 1) = defn%ispv180(1)
-    !
+    
     if (num90 .eq. 4) then
       if (num180 .eq. 0) then
         defn%can_be_rect = .true.

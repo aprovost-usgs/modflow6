@@ -84,7 +84,7 @@ contains
 
         ! -- If cell is active but dry, select and initialize
         ! -- pass-to-bottom method and set cell method pointer
-        if (this%fmi%ibdgwfsat0(ic) == 0) then ! kluge note: use cellDefn%sat == DZERO here instead?
+        if (this%fmi%ibdgwfsat0(ic) == 0) then
           call method_cell_ptb%init( &
             cell=this%cell, &
             trackfilectl=this%trackfilectl, &
@@ -103,7 +103,7 @@ contains
           cell%dz = dz
           cell%sinrot = DZERO
           cell%cosrot = DONE
-          cell%xOrigin = cell%defn%polyvert(1, 1) ! kluge note: could avoid using polyvert here
+          cell%xOrigin = cell%defn%polyvert(1, 1)
           cell%yOrigin = cell%defn%polyvert(2, 1)
           cell%zOrigin = cell%defn%bot
           cell%ipvOrigin = 1
@@ -123,8 +123,8 @@ contains
           cell%vz2 = -cell%defn%faceflow(7) * term
 
           ! -- Select and initialize Pollock's method and set method pointer
-          call method_cell_plck%init( & ! kluge note: could the FORCETERNARY (ifrctrn) devoption be used here?
-            cell=this%cell, & !             if not, we could always make a rectangular grid using disv
+          call method_cell_plck%init( &
+            cell=this%cell, &
             trackfilectl=this%trackfilectl, &
             tracktimes=this%tracktimes)
           submethod => method_cell_plck
@@ -166,18 +166,14 @@ contains
         inbr = cell%defn%facenbr(inface)
         if (inbr .eq. 0) then
           ! -- Exterior face; no neighbor to map to
-          ! particle%idomain(1) = 0
-          ! particle%idomain(2) = 0      ! kluge note: set a "has_exited" attribute instead???
-          ! particle%idomain(1) = -abs(particle%idomain(1))   ! kluge???
-          ! particle%idomain(2) = -abs(particle%idomain(2))   ! kluge???
-          particle%istatus = 2 ! kluge note: use -2 to allow check for transfer to another model???
+          ! todo AMP: consider when multiple models allowed
+          particle%istatus = 2
           particle%advancing = .false.
           call this%save(particle, reason=3) ! reason=3: termination
-          ! particle%iboundary(2) = -1
         else
           idiag = dis%con%ia(cell%defn%icell)
           ipos = idiag + inbr
-          ic = dis%con%ja(ipos) ! kluge note: use PRT model's DIS instead of fmi's???
+          ic = dis%con%ja(ipos)
           particle%idomain(2) = ic
 
           ! compute and set user node number and layer on particle
@@ -187,7 +183,6 @@ contains
           particle%icu = icu
           particle%ilay = ilay
 
-          ! call this%mapToNbrCell(cellRect%cellDefn,inface,z)
           if (inface .eq. 1) then
             inface = 3
           else if (inface .eq. 2) then
@@ -207,7 +202,7 @@ contains
             topfrom = cell%defn%top
             botfrom = cell%defn%bot
             zrel = (z - botfrom) / (topfrom - botfrom)
-            top = dis%top(ic) ! kluge note: use PRT model's DIS instead of fmi's???
+            top = dis%top(ic)
             bot = dis%bot(ic)
             sat = this%fmi%gwfsat(ic)
             z = bot + zrel * sat * (top - bot)
@@ -231,7 +226,7 @@ contains
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
 
-    call this%track(particle, 1, tmax) ! kluge, hardwired to level 1
+    call this%track(particle, 1, tmax)
   end subroutine apply_dis
 
   !> @brief Returns a top elevation based on index iatop
@@ -321,7 +316,7 @@ contains
       call get_jk(icu1, dis%get_ncpl(), dis%nlay, j1, klay1)
       do iloc = 1, dis%con%ia(ic1 + 1) - dis%con%ia(ic1) - 1
         ipos = dis%con%ia(ic1) + iloc
-        if (dis%con%mask(ipos) == 0) cycle ! kluge note: need mask here???
+        if (dis%con%mask(ipos) == 0) cycle
         ic2 = dis%con%ja(ipos)
         icu2 = dis%get_nodeuser(ic2)
         call get_ijk(icu2, dis%nrow, dis%ncol, dis%nlay, &
@@ -330,7 +325,7 @@ contains
           ! -- Edge (polygon) face neighbor
           if (irow2 > irow1) then
             ! Neighbor to the S
-            iedgeface = 4 ! kluge note: make sure this numbering is consistent with numbering in cell method
+            iedgeface = 4
           else if (jcol2 > jcol1) then
             ! Neighbor to the E
             iedgeface = 3
@@ -352,7 +347,6 @@ contains
       end do
     end select
     ! -- List of edge (polygon) faces wraps around
-    !    todo: why need to wrap around? no analog to "closing" a polygon?
     defn%facenbr(defn%npolyverts + 1) = defn%facenbr(1)
   end subroutine load_nbrs_to_defn
 
@@ -373,7 +367,7 @@ contains
     npolyverts = defn%npolyverts
 
     ! -- Load face flows.
-    defn%faceflow = 0d0 ! kluge note: eventually use DZERO for 0d0 throughout
+    defn%faceflow = 0d0 ! todo: eventually use DZERO for 0d0 throughout
     ! -- As with polygon nbrs, polygon face flows wrap around for
     ! -- convenience at position npolyverts+1, and bot and top flows
     ! -- are tacked on the end of the list
@@ -387,7 +381,7 @@ contains
     call this%load_boundary_flows_to_defn(defn)
     ! -- Set inoexitface flag
     defn%inoexitface = 1
-    do m = 1, npolyverts + 3 ! kluge note: can be streamlined with above code
+    do m = 1, npolyverts + 3
       if (defn%faceflow(m) < 0d0) defn%inoexitface = 0
     end do
 
@@ -417,7 +411,7 @@ contains
     ic = defn%icell
     ioffset = (ic - 1) * 10
     defn%faceflow(1) = defn%faceflow(1) + &
-                       this%fmi%BoundaryFlows(ioffset + 1) ! kluge note: should these be additive (seems so)???
+                       this%fmi%BoundaryFlows(ioffset + 1)
     defn%faceflow(2) = defn%faceflow(2) + &
                        this%fmi%BoundaryFlows(ioffset + 2)
     defn%faceflow(3) = defn%faceflow(3) + &

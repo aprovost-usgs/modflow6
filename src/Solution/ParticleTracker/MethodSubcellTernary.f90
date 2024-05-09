@@ -1,5 +1,6 @@
 module MethodSubcellTernaryModule
   use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DSAME, DONE, DHALF
   use ErrorUtilModule, only: pstop
   use GeomUtilModule, only: skew
   use MethodModule, only: MethodType
@@ -71,7 +72,7 @@ contains
     real(DP), intent(in) :: tmax
     ! local
     integer(I4B) :: exitFace
-    logical(LGP) :: lbary ! kluge
+    logical(LGP) :: lbary
     real(DP) :: x0
     real(DP) :: y0
     real(DP) :: x1
@@ -109,6 +110,7 @@ contains
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti
+    real(DP) :: gami
     real(DP) :: vzbot
     real(DP) :: vztop
     real(DP) :: vzi
@@ -135,12 +137,12 @@ contains
     real(DP) :: dtexit
     real(DP) :: alpexit
     real(DP) :: betexit
-    integer(I4B) :: ntdebug ! kluge
     integer(I4B) :: reason
     integer(I4B) :: i
     integer(I4B) :: tslice(2)
+    real(DP) :: tolnudge, lolimit, hilimit, delta
 
-    lbary = .true. ! kluge
+    lbary = .true. ! todo: remove before initial release
     ntmax = 10000
     nsave = 1 ! needed???
     isolv = this%zeromethod
@@ -170,7 +172,7 @@ contains
     vzbot = subcell%vzbot
     vztop = subcell%vztop
 
-    ! -- Translate and rotate coordinates to "canonical" configuration
+    ! -- Transform coordinates to "canonical" configuration
     call canonical(x0, y0, x1, y1, x2, y2, &
                    v0x, v0y, v1x, v1y, v2x, v2y, &
                    xi, yi, &
@@ -179,10 +181,81 @@ contains
                    alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
                    lbary)
 
-    ! -- Do calculations related to analytical z solution, which can be done
-    ! -- after traverse_triangle call if results not needed for adaptive time
-    ! -- stepping during triangle (subcell) traversal
-    ! kluge note: actually, can probably do z calculation just once for each cell
+    ! Nudge particle if necessary so that it begins within the subcell;
+    ! no closer than distance tolnudge from any edge of the subcell
+    ! todo before initial release: pull into separate routine
+    gami = 1d0 - (alpi + beti)
+    tolnudge = DSAME
+    lolimit = tolnudge
+    hilimit = DONE - 2d0 * tolnudge
+    ! Check alpha coordinate against lower limit
+    if (alpi < lolimit) then
+      ! Alpha is too low, so nudge alpha to lower limit; this is a move
+      ! parallel to the "alpha axis," which also changes gamma
+      alpi = lolimit
+      gami = DONE - alpi - beti
+      ! Check beta coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (beti < lolimit) then
+        ! Beta is too low (gamma is too high), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beti = lolimit
+        gami = hilimit
+      ! Check beta coordinate against upper limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! lower limit)
+      else if (beti > hilimit) then
+        ! Beta is too high (gamma is too low), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beti = hilimit
+        gami = lolimit
+      end if
+    end if
+    ! Check beta coordinate against lower limit. (If alpha coordinate
+    ! was nudged to lower limit, beta and gamma coordinates have also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent checks on beta and gamma will evaluate to false, and
+    ! no further adjustments will be made.)
+    if (beti < lolimit) then
+      ! Beta is too low, so nudge beta to lower limit; this is a move
+      ! parallel to the "beta axis," which also changes gamma
+      beti = lolimit
+      gami = DONE - alpi - beti
+      ! Check alpha coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (alpi < lolimit) then
+        ! Alpha is too low (gamma is too high), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpi = lolimit
+        gami = hilimit
+      ! Check alpha coordinate against upper limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! lower limit)
+      else if (alpi > hilimit) then
+        ! Alpha is too high (gamma is too low), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpi = hilimit
+        gami = lolimit
+      end if
+    end if
+    ! Check gamma coordinate against lower limit.(If alpha and/or beta
+    ! coordinate was nudged to lower limit, gamma coordinate has also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent check on gamma will evaluate to false, and no further
+    ! adjustment will be made.)
+    if (gami < lolimit) then
+      ! Gamma is too low, so nudge gamma to lower limit; this is a move
+      ! parallel to the "gamma axis," which also changes alpha and beta
+      delta = DHALF * (lolimit - gami)
+      gami = DSAME
+      alpi = alpi - delta
+      beti = beti - delta
+    end if
+
+    ! -- Do calculations related to analytical z solution, could possibly
+    !    be done just once for each cell, todo: profile?
     zirel = (zi - zbot) / dz
     call calculate_dt(vzbot, vztop, dz, zirel, vzi, &
                       az, dtexitz, izstatus, &
@@ -190,13 +263,8 @@ contains
     vziodz = vzi / dz
 
     ! -- Traverse triangular subcell
-    ntdebug = -999 ! kluge debug bludebug
     itrifaceenter = particle%iboundary(3) - 1
     if (itrifaceenter .eq. -1) itrifaceenter = 999
-
-    ! kluge note: can probably avoid calculating alpexit
-    ! here in many cases and wait to calculate it later,
-    ! once the final trajectory time is known
     call traverse_triangle(isolv, tol, step, &
                            dtexitxy, alpexit, betexit, &
                            itrifaceenter, itrifaceexit, &
@@ -204,17 +272,8 @@ contains
                            alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti, &
                            vziodz, az, lbary)
 
-    ! -- Check for no exit face
+    ! -- Check for no exit face, todo before initial release: terminate with istatus=9
     if ((itopbotexit .eq. 0) .and. (itrifaceexit .eq. 0)) then
-      ! exitFace = 0
-      ! particle%iboundary(3) = exitFace
-      ! particle%istatus = 5
-      ! return
-      ! particle%advancing = .false.
-      ! call this%save(particle, reason=3)
-      ! return
-
-      ! contact the developer situation (for now? always?)    ! kluge note: good question
       print *, "Subcell with no exit face: particle", get_particle_id(particle), &
         "cell", particle%idomain(2)
       call pstop(1)
@@ -253,7 +312,9 @@ contains
     ! -- Select user tracking times to solve. If this is the first time step
     !    of the simulation, include all times before it begins; if it is the
     !    last time step, include all times after it ends. Otherwise take the
-    !    times within the current period and time step only.
+    !    times within the current period and time step only
+    !    todo AMP: consider correctness/duplication, maybe pull into separate
+    !    routine if duplicative
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
     if (all(tslice > 0)) then
@@ -268,7 +329,6 @@ contains
         res = matmul(rot, loc) ! rotate vector
         x = res(1) + x0
         y = res(2) + y0
-        ! kluge note: make this into a function
         if (izstatus .eq. 2) then
           ! -- vz uniformly zero
           z = zi
@@ -306,8 +366,6 @@ contains
     end if
 
     ! -- Calculate final particle location
-    ! -- kluge note: need to evaluate both alpha and beta here only
-    ! -- for exitFace=0, otherwise just one or the other
     call step_analytical(dt, alp, bet)
     if (exitFace .eq. 1) then
       bet = 0d0
@@ -327,7 +385,7 @@ contains
     else if (exitFace .eq. 5) then
       z = ztop
     else
-      if (izstatus .eq. 2) then ! kluge note: make this into a function
+      if (izstatus .eq. 2) then
         ! -- vz uniformly zero
         z = zi
       else if (izstatus .eq. 1) then

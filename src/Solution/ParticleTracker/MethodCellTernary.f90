@@ -220,13 +220,13 @@ contains
 
     ! Calculate vertex velocities
     if (particle%ivvorig > 0) then
-      call this%vertvelo_orig() ! kluge note: devoption for now
+      call this%vertvelo_orig()
     else
       call this%vertvelo()
     end if
 
     ! Track across subcells
-    call this%track(particle, 2, tmax) ! kluge, hardwired to level 2
+    call this%track(particle, 2, tmax)
 
   end subroutine apply_mct
 
@@ -242,10 +242,6 @@ contains
     integer(I4B) :: ic
     integer(I4B) :: isc
     integer(I4B) :: iv0
-!    integer(I4B) :: iv1
-!    integer(I4B) :: ipv0
-!    integer(I4B) :: ipv1
-!    integer(I4B) :: iv
     real(DP) :: x0
     real(DP) :: y0
     real(DP) :: x1
@@ -276,15 +272,6 @@ contains
         xi = particle%x
         yi = particle%y
         do iv0 = 1, this%nverts
-!          iv0 = iv
-!          iv1 = iv + 1
-!          if (iv1 .gt. this%nverts) iv1 = 1
-!          ipv0 = iv0
-!          ipv1 = iv1
-!          x0 = this%xvert(ipv0)
-!          y0 = this%yvert(ipv0)
-!          x1 = this%xvert(ipv1)
-!          y1 = this%yvert(ipv1)
           x0 = this%xvert(iv0)
           y0 = this%yvert(iv0)
           x1 = this%xvertnext(iv0)
@@ -302,14 +289,13 @@ contains
           d01 = x0 * y1rel - y0 * x1rel
           alphai = (di2 - d02) / d12
           betai = -(di1 - d01) / d12
-          ! kluge note: can iboundary(2) be used to identify the subcell?
-          betatol = -1e-7 ! kluge
-          ! kluge note: think this handles points on triangle boundaries ok
+          ! todo, before initial release: check if removing beta >= betatol condition below is OK
+          betatol = -1e-7
           if ((alphai .ge. 0d0) .and. &
               (betai .ge. betatol) .and. &
               (alphai + betai .le. 1d0)) then
-            isc = iv0 ! but maybe not!!!!!!!!!!!!
-            exit ! kluge note: doesn't handle particle smack on cell center
+            isc = iv0
+            exit
           end if
         end do
         if (isc .le. 0) then
@@ -317,9 +303,6 @@ contains
             get_particle_id(particle), " in cell ", ic
           call pstop(1)
         else
-          ! subcellTri%isubcell = isc
-          ! kluge note: as a matter of form, do we want to allow
-          ! this subroutine to modify the particle???
           particle%idomain(3) = isc
         end if
       end if
@@ -327,14 +310,6 @@ contains
 
       ! Set coordinates and velocities at vertices of triangular subcell
       iv0 = isc
-!      iv1 = isc + 1
-!      if (iv1 .gt. this%nverts) iv1 = 1
-!      ipv0 = iv0
-!      ipv1 = iv1
-!      subcell%x0 = this%xvert(ipv0)
-!      subcell%y0 = this%yvert(ipv0)
-!      subcell%x1 = this%xvert(ipv1)
-!      subcell%y1 = this%yvert(ipv1)
       subcell%x0 = this%xvert(iv0)
       subcell%y0 = this%yvert(iv0)
       subcell%x1 = this%xvertnext(iv0)
@@ -343,7 +318,7 @@ contains
       subcell%y2 = this%yctr
       subcell%v0x = this%vv0x(iv0)
       subcell%v0y = this%vv0y(iv0)
-      subcell%v1x = this%vv1x(iv0) ! kluge note: the indices here actually refer to subcells, not vertices
+      subcell%v1x = this%vv1x(iv0) ! the indices here actually refer to subcells, not vertices
       subcell%v1y = this%vv1y(iv0)
       subcell%v2x = this%vctrx
       subcell%v2y = this%vctry
@@ -355,7 +330,8 @@ contains
     end select
   end subroutine load_subcell
 
-  !> @brief Calculate vertex velocities the original way    ! kluge note: temporary, for testing
+  !> @brief Calculate vertex velocities the original way
+  !! todo, before initial release: remove
   subroutine vertvelo_orig(this)
     use ConstantsModule, only: DZERO, DONE, DHALF
     ! dummy
@@ -496,10 +472,6 @@ contains
     real(DP), allocatable, dimension(:) :: umy
     real(DP), allocatable, dimension(:) :: kappax
     real(DP), allocatable, dimension(:) :: kappay
-!    real(DP), allocatable, dimension(:) :: vm0i
-!    real(DP), allocatable, dimension(:) :: vm0e
-!    real(DP), allocatable, dimension(:) :: vm1i
-!    real(DP), allocatable, dimension(:) :: vm1e
     real(DP), allocatable, dimension(:) :: vm0x
     real(DP), allocatable, dimension(:) :: vm0y
     real(DP), allocatable, dimension(:) :: vm1x
@@ -523,10 +495,6 @@ contains
       allocate (umy(this%nverts)) ! y components of midpoint-connector (cw) unit vectors
       allocate (kappax(this%nverts)) ! x components of kappa vectors
       allocate (kappay(this%nverts)) ! y components of kappa vectors
-!      allocate (vm0i(this%nverts))         ! component of vm0 normal to the interior edge it's on
-!      allocate (vm0e(this%nverts))         ! component of vm0 in the direction normal to the corresponding exterior edge
-!      allocate (vm1i(this%nverts))         ! component of vm1 normal to the interior edge it's on
-!      allocate (vm1e(this%nverts))         ! component of vm1 in the direction normal to the corresponding exterior edge
       allocate (vm0x(this%nverts)) ! x component of vm0
       allocate (vm0y(this%nverts)) ! y component of vm0
       allocate (vm1x(this%nverts)) ! x component of vm1
@@ -548,7 +516,7 @@ contains
       ! Cell area
       areacell = areapoly(this%xvert, this%yvert)
 
-      ! Cell centroid   ! kluge note: in general, this is NOT the average of the vertex coordinates
+      ! Cell centroid (in general, this is NOT the average of the vertex coordinates)
       sixa = areacell * 6.d0
       wk1 = -(this%xvert * this%yvertnext - this%xvertnext * this%yvert)
       this%xctr = sum((this%xvert + this%xvertnext) * wk1) / sixa
@@ -595,13 +563,16 @@ contains
       umx = wk1 / lm
       umy = wk2 / lm
 
-      ! Kappa vectors (K tensor times unit midpoint-connector vectors)
-      kappax = umx ! kluge (isotropic K=1.)
-      kappay = umy ! kluge (isotropic K=1.)
+      ! Kappa vectors (K tensor times unit midpoint-connector vectors) do not
+      ! account for anisotropy, which is consistent with the way internal face
+      ! flow calculations are done in MP7.
+      ! todo AMP: think about whether value of K matters
+      kappax = umx
+      kappay = umy
 
       ! Use linearity to find vm0i[0] such that curl of the head gradient
       ! is zero
-      perturb = 1.d-2 ! kluge?
+      perturb = 1.d-2
       ! Calculations at base value
       vm0i0 = 0.d0
       call this%calc_thru_hcsum(vm0i0, divcell, le, li, lm, areasub, &
@@ -760,7 +731,7 @@ contains
     be1y = (uney - uniynext * uprod) / det
     be01x = 5.d-1 * (be0x + be1x)
     be01y = 5.d-1 * (be0y + be1y)
-    wt = 1.d0 / dble(this%nverts) ! kluge (equal weights)
+    wt = 1.d0 / dble(this%nverts) ! todo AMP: consider equal weights
     emxx = 2.d0 - sum(wt * be01x * unex)
     emxy = -sum(wt * be01x * uney)
     emyx = -sum(wt * be01y * unex)
@@ -810,7 +781,8 @@ contains
 
   end subroutine calc_thru_hcsum
 
-  function areapoly(xv, yv) result(area) ! kluge note: should this be packaged with other utilities?
+  ! todo before initial release, maybe move to GeomUtil
+  function areapoly(xv, yv) result(area)
     ! dummy
     double precision, dimension(:) :: xv
     double precision, dimension(:) :: yv

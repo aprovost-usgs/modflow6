@@ -420,7 +420,7 @@ def check_output(idx, test):
     #     assert isclose(min(pls.y), 21, rel_tol=1e-4)
     #     assert isclose(max(pls.y), 981, rel_tol=1e-4)
 
-    plot_2d = True
+    plot_2d = False
     if plot_2d:
         # plot in 2d with mpl
         fig = plt.figure(figsize=(16, 10))
@@ -495,10 +495,14 @@ def check_output(idx, test):
                 color = "grey"
             ax.plot(x, y, "o", color=color, alpha=0.25, ms=2)
             ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
-        
+
         # plot subcell causing new vv approach to crash / fail to find exit face
-        points = [[1952., 0.], [1920., 0.], [1936.3416637081775, 13.098937592394444]]
-        for (x, y) in points:
+        points = [
+            [1952.0, 0.0],
+            [1920.0, 0.0],
+            [1936.3416637081775, 13.098937592394444],
+        ]
+        for x, y in points:
             ax.plot(x, y, "o", color="red", alpha=0.5, ms=5)
             ax.annotate(f"{x}, {y}", (x, y), color="red", alpha=0.5)
             ax.add_patch(Polygon(points, color="red", alpha=0.1))
@@ -555,6 +559,5 @@ def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
         check=lambda t: check_output(idx, t),
         targets=targets,
         compare=None,
-        xfail=[False, True]
     )
     benchmark(test.run)

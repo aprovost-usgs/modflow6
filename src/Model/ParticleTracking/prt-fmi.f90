@@ -146,10 +146,11 @@ contains
     call this%FlowModelInterfaceType%fmi_df(dis, idryinactive)
     !
     ! -- Allocate arrays
-    allocate (this%StorageFlows(this%dis%nodes)) ! kluge note: need allocate_arrays subroutine
+    allocate (this%StorageFlows(this%dis%nodes))
     allocate (this%SourceFlows(this%dis%nodes))
     allocate (this%SinkFlows(this%dis%nodes))
-    allocate (this%BoundaryFlows(this%dis%nodes * 10)) ! kluge note: hardwired to max 8 polygon faces plus top and bottom for now
+    ! todo before initial release: make max poly faces a constant and use here and elsewhere
+    allocate (this%BoundaryFlows(this%dis%nodes * 10))
 
   end subroutine prtfmi_df
 
@@ -160,7 +161,7 @@ contains
     class(PrtFmiType) :: this
     ! -- local
     integer :: j, i, ip, ib
-    integer :: ioffset, iflowface, iauxiflowface !, iface
+    integer :: ioffset, iflowface, iauxiflowface
     double precision :: qbnd
     character(len=LENAUXNAME) :: auxname
     integer(I4B) :: naux
@@ -172,8 +173,7 @@ contains
     if (this%igwfstrgsy /= 0) &
       this%StorageFlows = this%StorageFlows + &
                           this%gwfstrgsy
-    ! kluge note: need separate SourceFlows and SinkFlows? just for budget-reporting?
-    ! kluge note: SinkFlows used to identify weak sinks
+
     this%SourceFlows = 0d0
     this%SinkFlows = 0d0
     this%BoundaryFlows = 0d0
@@ -186,29 +186,23 @@ contains
           if (trim(adjustl(auxname)) == "IFLOWFACE") then
             iauxiflowface = j
             exit
-            ! else if (trim(adjustl(auxname)) == "IFACE") then   ! kluge note: allow IFACE and do conversion???
-            !   iauxiflowface = -j
-            !   exit
           end if
         end do
       end if
       do ib = 1, this%gwfpackages(ip)%nbound
         i = this%gwfpackages(ip)%nodelist(ib)
-        ! if (this%gwfibound(i) <= 0) cycle
         if (this%ibound(i) <= 0) cycle
         qbnd = this%gwfpackages(ip)%get_flow(ib)
-        iflowface = 0 ! kluge note: eventually have default iflowface values for different packages
+        ! todo, after initial release: default iflowface values for different packages
+        iflowface = 0
         if (iauxiflowface > 0) then
-          ! expected int here... ok to round??
           iflowface = NINT(this%gwfpackages(ip)%auxvar(iauxiflowface, ib))
+          ! todo before initial release: make max poly faces a constant and use here and elsewhere (constant + 1)
           if (iflowface < 0) iflowface = iflowface + 11 ! bot -> 9, top -> 10; see note re: max faces below
-          ! else if (iauxiflowface < 0) then                    ! kluge note: allow IFACE and do conversion???
-          !   ! kluge note: is it possible to check for a rectangular-celled grid here???
-          !   iface = this%gwfpackages(ip)%auxvar(-iauxiflowface, ib)
-          !   iflowface = iface   ! kluge note: will need to convert
         end if
         if (iflowface .gt. 0) then
-          ioffset = (i - 1) * 10 ! kluge note: hardwired for max 8 polygon faces plus top and bottom for now
+          ! todo before initial release: make max poly faces a constant and use here and elsewhere
+          ioffset = (i - 1) * 10
           this%BoundaryFlows(ioffset + iflowface) = &
             this%BoundaryFlows(ioffset + iflowface) + qbnd
         else if (qbnd .gt. 0d0) then

@@ -21,7 +21,7 @@ module CellRectQuadModule
     double precision :: yOrigin ! model y origin for local (x, y)
     double precision :: zOrigin ! model z origin for local z
 
-    double precision :: qextl1(4), qextl2(4), qintl(5) ! external and internal subcell flows for the cell   ! kluge note: move these to MethodCellRectQuad ???
+    double precision :: qextl1(4), qextl2(4), qintl(5) ! external and internal subcell flows for the cell
     integer, allocatable :: irectvert(:) ! list of indices of the rectangle vertices
     integer, allocatable :: ipv4irv(:, :) ! list of the polygon vertex indices that correspond to the rectangle vertex indices
     double precision, allocatable :: rectflow(:, :) ! flow(s) for each rectangle face
@@ -112,7 +112,7 @@ contains
     integer :: irv1
     ! -- local
     integer :: irv, irv2, irv4, ipv1, ipv2, ipv4
-    integer, dimension(4) :: irvnxt = (/2, 3, 4, 1/) ! kluge???
+    integer, dimension(4) :: irvnxt = (/2, 3, 4, 1/) ! todo WPB: reconsider
     double precision :: x1, y1, x2, y2, x4, y4
 
     ! -- Find the "southwest" rectangle vertex by finding the vertex formed
@@ -159,12 +159,12 @@ contains
     double precision :: xOrigin, yOrigin, zOrigin, dx, dy, dz, sinrot, cosrot
     ! -- local
     integer :: irv2, irv4, ipv1, ipv2, ipv4
-    integer, dimension(4) :: irvnxt = (/2, 3, 4, 1/) ! kluge???
+    integer, dimension(4) :: irvnxt = (/2, 3, 4, 1/) ! todo WPB: reconsider
     double precision :: x1, y1, x2, y2, x4, y4, dx2, dy2, dx4, dy4
 
     ! -- Get rectangle vertex neighbors irv2 and irv4
     irv2 = irvnxt(irv1)
-    irv4 = irvnxt(irvnxt(irv2)) ! kluge
+    irv4 = irvnxt(irvnxt(irv2))
 
     ! -- Get model coordinates at irv1, irv2, and irv4
     ipv1 = this%irectvert(irv1)
@@ -187,7 +187,7 @@ contains
     dy4 = y4 - yOrigin
     dx = dsqrt(dx4 * dx4 + dy4 * dy4)
     dy = dsqrt(dx2 * dx2 + dy2 * dy2)
-    dz = this%defn%top - zOrigin ! kluge note: need to account for partial saturation
+    dz = this%defn%top - zOrigin
 
     ! -- Compute sine and cosine of rotation angle (angle between "southern"
     ! -- rectangle side irv1-irv4 and the model x axis)

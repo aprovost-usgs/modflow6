@@ -210,7 +210,7 @@ contains
       res = (/alpi, beti/)
       res = skew(res, (/sxx, sxy, syy/))
       alpi = res(1)
-      beti = res(2) ! kluge note: tiny negative beti led to tiny negative texit in test_prt_triangle with iflowface=1
+      beti = res(2)
     end if
 
   end subroutine
@@ -282,7 +282,7 @@ contains
     real(DP) :: vfact
     real(DP) :: oowaa
 
-    zerotol = 1d-10 ! kluge
+    zerotol = 1d-10 ! todo AMP: consider
     if (dabs(wbb) .gt. zerotol) then
       wratv = (wab / wbb) * cv0(2)
       acoef = cv0(1) - wratv
@@ -367,6 +367,7 @@ contains
   end subroutine
 
   !> @brief Step (evaluate) numerically depending in case
+  ! todo: before initial release remove
   subroutine step_euler(nt, step, vziodz, az, alpi, beti, t, alp, bet)
     ! -- dummy
     integer(I4B) :: nt
@@ -473,7 +474,6 @@ contains
     real(DP) :: v1n
     real(DP) :: v2n
     real(DP) :: vbeti
-    real(DP) :: zerotol
     real(DP) :: betlo
     real(DP) :: bethi
     real(DP) :: betsollo
@@ -483,7 +483,6 @@ contains
     integer(I4B) :: ibettrend
 
     ! -- Use iterative scheme or numerical integration indicated by isolv.
-    zerotol = 1d-10 ! kluge
     if (itriface .eq. 0) then
       ! -- Checking for exit on canonical face 0 (beta = 0)
       if (itrifaceenter .eq. 0) then
@@ -492,7 +491,7 @@ contains
         texit = huge(1d0)
       else
         ! -- Not the entrance face, so check for outflow
-        if (cv0(2) .ge. 0d0) then
+        if (cv0(2) .ge. 0d0) then  ! check beta velocity along beta=0 face
           ! -- Inflow or no flow, so no exit
           texit = huge(1d0)
         else
@@ -563,8 +562,11 @@ contains
                 alpexit = 1d0 - beti
               else
                 alpexit = 0d0
-              end if ! kluge note: seems like in this case (beta=const) this
-              betexit = beti !   must be the ONLY exit; no need to check other edges??
+              end if
+              ! seems like in this case (beta=const) this
+              ! must be the ONLY exit; no need to check other edges??
+              ! todo AMP: consider
+              betexit = beti 
               if (waa .ne. 0d0) then
                 alplim = -v0alpstar / waa
                 texit = dlog(alpexit - alplim / (alpi - alplim)) / waa
@@ -578,7 +580,7 @@ contains
           ! -- Beta varies along trajectory; combine outflow and soln limits on beta
           bethi = min(betouthi, betsolhi)
           betlo = max(betoutlo, betsollo)
-          if (betlo .ge. bethi) then
+          if (betlo .gt. bethi) then
             ! -- If bounds on bet leave no feasible interval, no exit
             texit = huge(1d0)
           else
@@ -596,6 +598,7 @@ contains
               ! -- Root not bracketed; no exit
               texit = huge(1d0)
             else
+              isolv = 2
               if (isolv .eq. 0) then
                 ! -- Use Euler integration to find exit
                 call soln_euler(itriface, alpi, beti, step, vziodz, az, &
@@ -669,13 +672,8 @@ contains
     real(DP) :: term
     real(DP) :: zerotol
 
-    if (cb2 == 0.0_DP) then
-      print *, "cb2 == 0.0, nudging"
-      cb2 = DPREC
-    end if
-
-    ! kluge note: assumes cb2<>0, wbb<>0 as appropriate
-    zerotol = 1d-10 ! kluge
+    ! assumes cb2<>0, wbb<>0
+    zerotol = 1d-10 ! todo AMP: consider
     term = (bet - cb1) / cb2
 
     if (icase .eq. 1) then
@@ -805,17 +803,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- assuming betlo and bethi bracket the root
-    ! --
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -841,16 +833,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- note: assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -865,6 +852,7 @@ contains
   end subroutine
 
   !> @brief Use a test method with initial bounds on beta of betlo and bethi
+  ! todo: remove for initial release
   subroutine soln_test(itriface, betlo, bethi, tol, &
                        texit, alpexit, betexit)
     ! -- dummy
@@ -876,16 +864,11 @@ contains
     real(DP) :: alpexit
     real(DP) :: betexit
     ! -- local
-    real(DP) :: itmax
-    real(DP) :: itact
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
     ! -- assuming betlo and bethi bracket the root
-    ! tol = 1d-7               ! kluge
-    itmax = 50 ! kluge
-    itact = itmax + 1 ! kluge
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -900,6 +883,7 @@ contains
   end subroutine
 
   !> @brief Use Euler integration to find exit
+  ! todo: remove for initial release
   subroutine soln_euler(itriface, alpi, beti, step, vziodz, &
                         az, texit, alpexit, betexit)
     ! -- dummy

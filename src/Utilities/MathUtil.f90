@@ -156,6 +156,15 @@ contains
     fc = f(c)
     t = 5d-1
 
+    ! check whether a or b is the solution
+    if (fa == 0d0) then
+      z = a
+      return
+    else if (fb == 0d0) then
+      z = b
+      return
+    end if
+
     do while (.true.)
       ! xt = a + t*(b - a)
       xt = a - t * aminusb
@@ -273,9 +282,22 @@ contains
     fa = f(a)
     fb = f(b)
 
-    ! check that f(ax) and f(bx) have different signs
-    if (.not. ((fa .eq. 0.0d0 .or. fb .eq. 0.0d0) .or. &
-               (fa * (fb / dabs(fb)) .le. 0.0d0))) &
+    ! check that f(ax) and f(bx) have different signs,
+    ! if (.not. ((fa .eq. 0.0d0 .or. fb .eq. 0.0d0) .or. &
+    !            (fa * (fb / dabs(fb)) .le. 0.0d0))) &
+    !   call pstop(1, 'f(ax) and f(bx) do not have different signs,')
+
+    ! check whether a or b is the solution
+    if (fa == 0d0) then
+      z = a
+      return
+    else if (fb == 0d0) then
+      z = b
+      return
+    end if
+
+    ! check whether f(ax) and f(bx) have opposite sign
+    if (fa * (fb / dabs(fb)) .ge. 0.0d0) &
       call pstop(1, 'f(ax) and f(bx) do not have different signs,')
 
     rs = .true. ! var reset
@@ -356,6 +378,7 @@ contains
   end function zero_br
 
   !> @brief Compute a zero of f(x) in the interval (x0, x1) with a test method.
+  ! todo: remove before initial release
   function zero_test(x0, x1, f, epsa) result(z)
     ! -- dummy
     real(DP) :: x0, x1

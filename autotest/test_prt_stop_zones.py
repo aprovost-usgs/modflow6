@@ -55,9 +55,7 @@ def create_izone(nlay, nrow, ncol):
 
 
 def build_gwf_sim(name, ws, mf6):
-    gwf_sim = FlopyReadmeCase.get_gwf_sim(
-        name, ws, mf6
-    )
+    gwf_sim = FlopyReadmeCase.get_gwf_sim(name, ws, mf6)
     gwf = gwf_sim.get_model()
     dis = gwf.get_package("DIS")
     nlay = int(name[-1])
