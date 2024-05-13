@@ -563,9 +563,6 @@ contains
               else
                 alpexit = 0d0
               end if
-              ! seems like in this case (beta=const) this
-              ! must be the ONLY exit; no need to check other edges??
-              ! todo AMP: consider
               betexit = beti 
               if (waa .ne. 0d0) then
                 alplim = -v0alpstar / waa

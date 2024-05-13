@@ -305,7 +305,7 @@ contains
       end if
     end if
 
-    ! -- Compute exit time
+    ! -- Compute exit time, irrespective of tmax for now
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
@@ -315,6 +315,8 @@ contains
     !    times within the current period and time step only
     !    todo AMP: consider correctness/duplication, maybe pull into separate
     !    routine if duplicative
+    ! AMP kluge note: Why are tracking times before first time step begins included?
+
     call this%tracktimes%try_advance()
     tslice = this%tracktimes%selection
     if (all(tslice > 0)) then
@@ -322,23 +324,26 @@ contains
         t = this%tracktimes%times(i)
         if (t < particle%ttrack .or. t >= texit .or. t >= tmax) cycle
         dt = t - t0
-        call step_analytical(dt, alp, bet)
-        loc = (/alp, bet/)
-        if (lbary) loc = skew(loc, (/sxx, sxy, syy/), invert=.true.)
-        rot = reshape((/rxx, rxy, ryx, ryy/), shape(rot))
-        res = matmul(rot, loc) ! rotate vector
-        x = res(1) + x0
-        y = res(2) + y0
-        if (izstatus .eq. 2) then
-          ! -- vz uniformly zero
-          z = zi
-        else if (izstatus .eq. 1) then
-          ! -- vz uniform, nonzero
-          z = zi + vzi * dt
-        else
-          ! -- vz nonuniform
-          z = zbot + (vzi * dexp(az * dt) - vzbot) / az
-        end if
+        !!call step_analytical(dt, alp, bet)
+        !!loc = (/alp, bet/)
+        !!if (lbary) loc = skew(loc, (/sxx, sxy, syy/), invert=.true.)
+        !!rot = reshape((/rxx, rxy, ryx, ryy/), shape(rot))
+        !!res = matmul(rot, loc) ! rotate vector
+        !!x = res(1) + x0
+        !!y = res(2) + y0
+        !!if (izstatus .eq. 2) then
+        !!  ! -- vz uniformly zero
+        !!  z = zi
+        !!else if (izstatus .eq. 1) then
+        !!  ! -- vz uniform, nonzero
+        !!  z = zi + vzi * dt
+        !!else
+        !!  ! -- vz nonuniform
+        !!  z = zbot + (vzi * dexp(az * dt) - vzbot) / az
+        !!end if
+        ! AMP kluge note: refactored into new subroutine
+        call calculate_xyz_position(dt, rxx, rxy, ryx, ryy, sxx, sxy, syy, &
+                                    izstatus, lbary, x, y, z)
         particle%x = x
         particle%y = y
         particle%z = z
@@ -348,6 +353,8 @@ contains
       end do
     end if
 
+    ! Compute final time, taking into account tmax, and set final
+    ! particle status
     if (texit .gt. tmax) then
       ! -- The computed exit time is greater than the maximum time, so set
       ! -- final time for particle trajectory equal to maximum time.
@@ -365,37 +372,40 @@ contains
       reason = 1 ! cell transition
     end if
 
-    ! -- Calculate final particle location
-    call step_analytical(dt, alp, bet)
-    if (exitFace .eq. 1) then
-      bet = 0d0
-    else if (exitFace .eq. 2) then
-      alp = 1d0 - bet
-    else if (exitFace .eq. 3) then
-      alp = 0d0
-    end if
-    loc = (/alp, bet/)
-    if (lbary) loc = skew(loc, (/sxx, sxy, syy/), invert=.true.)
-    rot = reshape((/rxx, rxy, ryx, ryy/), shape(rot))
-    res = matmul(rot, loc) ! rotate vector
-    x = res(1) + x0
-    y = res(2) + y0
-    if (exitFace .eq. 4) then
-      z = zbot
-    else if (exitFace .eq. 5) then
-      z = ztop
-    else
-      if (izstatus .eq. 2) then
-        ! -- vz uniformly zero
-        z = zi
-      else if (izstatus .eq. 1) then
-        ! -- vz uniform, nonzero
-        z = zi + vzi * dt
-      else
-        ! -- vz nonuniform
-        z = zbot + (vzi * dexp(az * dt) - vzbot) / az
-      end if
-    end if
+    ! -- Calculate final local (unscaled) subcell coordinates
+    !!call step_analytical(dt, alp, bet)
+    !!if (exitFace .eq. 1) then
+    !!  bet = 0d0
+    !!else if (exitFace .eq. 2) then
+    !!  alp = 1d0 - bet
+    !!else if (exitFace .eq. 3) then
+    !!  alp = 0d0
+    !!end if
+    !!loc = (/alp, bet/)
+    !!if (lbary) loc = skew(loc, (/sxx, sxy, syy/), invert=.true.)
+    !!rot = reshape((/rxx, rxy, ryx, ryy/), shape(rot))
+    !!res = matmul(rot, loc) ! rotate vector
+    !!x = res(1) + x0
+    !!y = res(2) + y0
+    !!if (exitFace .eq. 4) then
+    !!  z = zbot
+    !!else if (exitFace .eq. 5) then
+    !!  z = ztop
+    !!else
+    !!  if (izstatus .eq. 2) then
+    !!    ! -- vz uniformly zero
+    !!    z = zi
+    !!  else if (izstatus .eq. 1) then
+    !!    ! -- vz uniform, nonzero
+    !!    z = zi + vzi * dt
+    !!  else
+    !!    ! -- vz nonuniform
+    !!    z = zbot + (vzi * dexp(az * dt) - vzbot) / az
+    !!  end if
+    !!end if
+    ! AMP kluge note: refactored into new subroutine
+    call calculate_xyz_position(dt, rxx, rxy, ryx, ryy, sxx, sxy, syy, &
+                                izstatus, lbary, x, y, z, exitface)
 
     ! -- Set final particle location in local (unscaled) subcell coordinates,
     ! -- final time for particle trajectory, and exit face
@@ -547,5 +557,69 @@ contains
     dt = log(vr) / dvdx
     status = 0
   end subroutine calculate_dt
+
+  subroutine calculate_xyz_position(dt, rxx, rxy, ryx, ryy, sxx, sxy, syy, &
+                                    izstatus, lbary, x, y, z, exitFace)
+    ! dummy
+    real(DP) :: dt
+    real(DP) :: rxx
+    real(DP) :: rxy
+    real(DP) :: ryx
+    real(DP) :: ryy
+    real(DP) :: sxx
+    real(DP) :: sxy
+    real(DP) :: syy
+    integer(I4B) :: izstatus
+    integer(I4B) :: lbary
+    real(DP) :: x
+    real(DP) :: y
+    real(DP) :: z
+    integer(I4B), optional :: exitFace
+    ! local
+    real(DP) :: rot(2, 2), res(2), loc(2)
+    real(DP) :: alp
+    real(DP) :: bet
+
+    call step_analytical(dt, alp, bet)
+    
+    if (present(exitface)) then
+      ! exitFace is specified, so set corresponding coordinate
+      ! exactly
+      if (exitFace .eq. 1) then
+        bet = 0d0
+      else if (exitFace .eq. 2) then
+        alp = DONE - bet
+      else if (exitFace .eq. 3) then
+        alp = 0d0
+      else if (exitFace .eq. 4) then
+        z = zbot
+      else ! exitFace == 5
+        z = ztop
+      end if
+    else
+      ! exitFace is not specified, so accept calculated values
+      ! of alpha and beta, and calculate z
+      if (izstatus .eq. 2) then
+        ! -- vz uniformly zero
+        z = zi
+      else if (izstatus .eq. 1) then
+        ! -- vz uniform, nonzero
+        z = zi + vzi * dt
+      else
+        ! -- vz nonuniform
+        z = zbot + (vzi * dexp(az * dt) - vzbot) / az
+      end if
+    end if
+    
+    ! transform (alp, beta) to (x, y)
+    loc = (/alp, bet/)
+    if (lbary) loc = skew(loc, (/sxx, sxy, syy/), invert=.true.)
+    rot = reshape((/rxx, rxy, ryx, ryy/), shape(rot))
+    res = matmul(rot, loc) ! rotate vector
+    x = res(1) + x0
+    y = res(2) + y0
+    
+  end subroutine calculate_xyz_position
+      
 
 end module MethodSubcellTernaryModule

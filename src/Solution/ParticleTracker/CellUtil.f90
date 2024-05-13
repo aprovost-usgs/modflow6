@@ -79,7 +79,7 @@ contains
     dy4 = y4 - yOrigin
     dx = dsqrt(dx4 * dx4 + dy4 * dy4)
     dy = dsqrt(dx2 * dx2 + dy2 * dy2)
-    dz = defn%top - zOrigin ! todo: need to account for partial saturation
+    dz = defn%top - zOrigin
     sinrot = dy4 / dx
     cosrot = dx4 / dx
     rect%defn = poly%defn

@@ -516,9 +516,8 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! assignment of BoundaryFlows to faceflow below assumes vertex 1
-    ! is at upper left of rectangular cell, and BoundaryFlows use old iface order
-    ! todo AMP: determine whether old iface order is actually used
+    ! assignment of BoundaryFlows to faceflow below assumes clockwise
+    ! ordering of faces, with face 1 being the "western" face
     ioffset = (ic - 1) * 10
     defn%faceflow(1) = defn%faceflow(1) + &
                        this%fmi%BoundaryFlows(ioffset + 4)
@@ -559,9 +558,6 @@ contains
     ic = defn%icell
     npolyverts = defn%npolyverts
 
-    ! assignment of BoundaryFlows to faceflow below assumes vertex 1
-    ! is at upper left of rectangular cell, and BoundaryFlows use old iface order
-    ! todo AMP: determine whether old iface order is actually used
     ioffset = (ic - 1) * 10
     ! -- Polygon faces in positions 1 through npolyverts
     do n = 1, 4
@@ -574,7 +570,6 @@ contains
       end if
       qbf = this%fmi%BoundaryFlows(ioffset + nbf)
       nn = 0
-      ! todo AMP: what is going on
       do m = 1, npolyverts
         if (.not. defn%ispv180(m)) then
           nn = nn + 1
@@ -658,7 +653,6 @@ contains
     integer(I4B) :: ic
     integer(I4B) :: num90
     integer(I4B) :: num180
-    integer(I4B) :: numacute
     real(DP) :: x0
     real(DP) :: y0
     real(DP) :: x1
@@ -687,7 +681,6 @@ contains
     epsang = 1d-3 ! todo AMP: consider
     num90 = 0
     num180 = 0
-    numacute = 0
     last180 = .false.
     ! assumes non-self-intersecting polygon
     do m = 1, npolyverts
@@ -716,29 +709,19 @@ contains
       s2mag = dsqrt(s2x * s2x + s2y * s2y)
       sinang = (s0x * s2y - s0y * s2x) / (s0mag * s2mag)
       cosang = dsqrt(1d0 - (sinang * sinang))
-      ! todo AMP: consider this approach
       if (dabs(sinang) .lt. epsang) then
         dotprod = s0x * s2x + s0y * s2y
-        if (dotprod .gt. 0d0) then
-          ! todo before initial release: store error and terminate simulation
-          print *, "Cell ", ic, " has a zero angle"
-          print *, "      (tolerance epsang = ", epsang, ")"
-          call pstop(1)
-        else
+        if (dotprod .lt. 0d0) then
+      ! AMP kluge note: removed check for near-zero angle
           num180 = num180 + 1
           last180 = .true.
           defn%ispv180(m) = .true.
         end if
-      else if (sinang .gt. 0d0) then
-        numacute = numacute + 1
+      else
+        ! AMP kluge note: numacute not needed - removed
         if (dabs(cosang) .lt. epsang) num90 = num90 + 1
         last180 = .false.
-      else
-        ! todo before initial release: store error and terminate sim
-        print *, "Cell ", ic, &
-          " has an obtuse angle and so is nonconvex"
-        print *, "      (tolerance epsang = ", epsang, ")"
-        call pstop(1)
+      ! AMP kluge note: removed check for nonconvex cell
       end if
     end do
 

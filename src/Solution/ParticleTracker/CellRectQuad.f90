@@ -29,7 +29,7 @@ module CellRectQuadModule
     procedure :: destroy => destroy_cell_rect_quad ! destructor for the cell
     procedure :: init_from ! initializes the cell from an existing cell
 
-    procedure :: load_irectvert ! loads list of indices of the rectangle vertices
+    procedure :: load_irectvert_rectflow ! loads list of indices of the rectangle vertices and face flows
     procedure :: get_irectvertSW ! gets index of southwest rectangle vertex
     procedure :: get_rectDimensionsRotation ! gets rectangular dimensions and rotation
 
@@ -59,20 +59,21 @@ contains
     deallocate (this%type)
   end subroutine destroy_cell_rect_quad
 
-  !> @brief Initialize a rectangular-quad cell from another cell
+  !> @brief Initialize a rectangular-quad cell from cell definition
   subroutine init_from(this, defn)
     class(CellRectQuadType), intent(inout) :: this
     type(CellDefnType), pointer :: defn
     this%defn => defn
-    call this%load_irectvert()
+    call this%load_irectvert_rectflow()
   end subroutine init_from
 
-  !> @brief Load local polygon vertex indices
+  !> @brief Load local polygon vertex indices and rectangular
+  !> face flows
   !!
   !! Loads local polygon vertex indices of the four rectangle
-  !! vertices of a rectangular-quad cell. Todo: rename?
+  !! vertices and face flows of a rectangular-quad cell.
   !<
-  subroutine load_irectvert(this)
+  subroutine load_irectvert_rectflow(this)
     ! -- dummy
     class(CellRectQuadType), intent(inout) :: this
     ! -- local
@@ -99,7 +100,7 @@ contains
 
     ! Wrap around for convenience
     this%irectvert(5) = this%irectvert(1)
-  end subroutine load_irectvert
+  end subroutine load_irectvert_rectflow
 
   !> @brief Get index of SW rectangle vertex
   !!

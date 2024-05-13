@@ -565,8 +565,9 @@ contains
 
       ! Kappa vectors (K tensor times unit midpoint-connector vectors) do not
       ! account for anisotropy, which is consistent with the way internal face
-      ! flow calculations are done in MP7.
-      ! todo AMP: think about whether value of K matters
+      ! flow calculations are done in MP7. The isotropic value of K does not
+      ! matter in this case because it cancels out of the calculations, so
+      ! K = 1 is assumed for simplicity.
       kappax = umx
       kappay = umy
 
@@ -732,6 +733,9 @@ contains
     be01x = 5.d-1 * (be0x + be1x)
     be01y = 5.d-1 * (be0y + be1y)
     wt = 1.d0 / dble(this%nverts) ! todo AMP: consider equal weights
+    ! AMP kluge note: think a good weighting c\would be
+    !                 wt = areasub / area
+    !                 need to check my notes to confirm a detail
     emxx = 2.d0 - sum(wt * be01x * unex)
     emxy = -sum(wt * be01x * uney)
     emyx = -sum(wt * be01y * unex)
