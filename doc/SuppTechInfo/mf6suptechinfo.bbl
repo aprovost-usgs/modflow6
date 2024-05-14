@@ -1,4 +1,4 @@
-\begin{thebibliography}{18}
+\begin{thebibliography}{21}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -31,6 +31,13 @@ Healy, R.W., and Ronan, A.D., 1996, Documentation of Computer Program VS2DH for
   Geological Survey Water-Resources Investigation Report 96-4230, 36 p.},
   accessed September 27, 2022, at \url{https://doi.org/10.3133/wri964230}, at
   \url{https://pubs.usgs.gov/wri/1996/4230/report.pdf}.
+
+\bibitem[{Hecht-Mendez and others(2010)Hecht-Mendez, Molina-Giraldo, Blum, and
+  Bayer}]{hechtmendez}
+Hecht-Mendez, J., Molina-Giraldo, N., Blum, P., and Bayer, P., 2010, Evaluating
+  mt3dms for heat transport simulation of closed geothermal systems:
+  Groundwater, v.~48, no.~5, p.~741--756,
+  \url{https://doi.org/10.1111/j.1745-6584.2010.00678.x}.
 
 \bibitem[{Hughes and Sanford(2004)}]{hughes2004}
 Hughes, J.D., and Sanford, W.E., 2004, SUTRA-MS: A version of SUTRA modified to
@@ -80,6 +87,11 @@ Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022,
   Geological Survey Techniques and Methods, book 6, chap. A61, 56 p.},
   \url{https://doi.org/10.3133/tm6A61}.
 
+\bibitem[{Ma and Zheng(2010)}]{mazheng2010}
+Ma, Rui, and Zheng, Chunmiao, 2010, Effects of density and viscosity in
+  modeling heat as a groundwater tracer: Groundwater, v.~48, no.~3,
+  p.~380--389, \url{https://doi.org/10.1111/j.1745-6584.2009.00660.x}.
+
 \bibitem[{Maidment(1993)}]{maidment1993}
 Maidment, D.R., 1993, Handbook of Hydrology: New York, USA, McGraw-Hill.
 
@@ -105,6 +117,12 @@ Provost, A.M., Langevin, C.D., and Hughes, J.D., 2017, Documentation for the
   ``XT3D'' Option in the Node Property Flow (NPF) Package of MODFLOW 6: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A56, 46 p.},
   \url{https://doi.org/10.3133/tm6A56}.
+
+\bibitem[{Thorne and others(2006)Thorne, Langevin, and Sukop}]{thorne2006}
+Thorne, Danny, Langevin, C.D., and Sukop, M.C., 2006, Addition of simultaneous
+  heat and solute transport and variable fluid viscosity to seawat: Computers
+  and Geosciences, v.~32, no.~10, p.~1758--1768,
+  \url{https://doi.org/https://doi.org/10.1016/j.cageo.2006.04.005}.
 
 \bibitem[{Voss(1984)}]{voss1984sutra}
 Voss, C.I., 1984, SUTRA---A finite-element simulation model for
