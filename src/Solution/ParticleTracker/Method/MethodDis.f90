@@ -468,12 +468,12 @@ contains
     call this%load_cell_no_exit_face(defn)
 
     ! Add up net distributed flow
-    defn%distflow = this%fmi%SourceFlows(defn%icell) + &
-                    this%fmi%SinkFlows(defn%icell) + &
+    defn%distflow = this%fmi%bff%SourceFlows(defn%icell) + &
+                    this%fmi%bff%SinkFlows(defn%icell) + &
                     this%fmi%StorageFlows(defn%icell)
 
     ! Set weak sink flag
-    if (this%fmi%SinkFlows(defn%icell) .ne. DZERO) then
+    if (this%fmi%bff%SinkFlows(defn%icell) .ne. DZERO) then
       defn%iweaksink = 1
     else
       defn%iweaksink = 0
@@ -507,18 +507,18 @@ contains
     ! local
 
     defn%faceflow(1) = defn%faceflow(1) + &
-                       this%fmi%BoundaryFlows(defn%icell, 1)
+                       this%fmi%bff%BoundaryFlows(defn%icell, 1)
     defn%faceflow(2) = defn%faceflow(2) + &
-                       this%fmi%BoundaryFlows(defn%icell, 2)
+                       this%fmi%bff%BoundaryFlows(defn%icell, 2)
     defn%faceflow(3) = defn%faceflow(3) + &
-                       this%fmi%BoundaryFlows(defn%icell, 3)
+                       this%fmi%bff%BoundaryFlows(defn%icell, 3)
     defn%faceflow(4) = defn%faceflow(4) + &
-                       this%fmi%BoundaryFlows(defn%icell, 4)
+                       this%fmi%bff%BoundaryFlows(defn%icell, 4)
     defn%faceflow(5) = defn%faceflow(1)
     defn%faceflow(6) = defn%faceflow(6) + &
-                       this%fmi%BoundaryFlows(defn%icell, this%fmi%max_faces - 1)
+                       this%fmi%bff%BoundaryFlows(defn%icell, this%fmi%max_faces - 1)
     defn%faceflow(7) = defn%faceflow(7) + &
-                       this%fmi%BoundaryFlows(defn%icell, this%fmi%max_faces)
+                       this%fmi%bff%BoundaryFlows(defn%icell, this%fmi%max_faces)
   end subroutine load_cell_boundary_flows
 
 end module MethodDisModule

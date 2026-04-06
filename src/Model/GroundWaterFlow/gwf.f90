@@ -23,6 +23,7 @@ module GwfModule
   use GwfObsModule, only: GwfObsType, gwf_obs_cr
   use MatrixBaseModule
   use VectorBaseModule
+  use PackageBudgetModule
 
   implicit none
 
@@ -61,6 +62,9 @@ module GwfModule
     integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: iss => null() ! steady state flag
     integer(I4B), pointer :: inewtonur => null() ! newton under relaxation flag
+    
+    integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
+    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to store boundary-face flow (aux) info for packages
 
   contains
 
@@ -318,6 +322,9 @@ contains
     class(GwfModelType) :: this
     ! -- locals
     integer(I4B) :: ip
+    integer(I4B) :: iterm
+    integer(I4B) :: nflowpack
+    integer(I4B) :: nbound
     class(BndType), pointer :: packobj
     !
     ! -- Allocate and read modules attached to model
@@ -350,6 +357,32 @@ contains
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
       if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)
     end do
+    
+    nflowpack = this%bndlist%Count()
+    allocate (this%nflowpack)
+    this%nflowpack = nflowpack
+    allocate (this%gwfpackages(this%nflowpack))       ! no mover
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      nbound = packobj%nbound
+      allocate (this%gwfpackages(ip)%nbound)
+      this%gwfpackages(ip)%nbound => packobj%nbound
+      allocate (this%gwfpackages(ip)%nodelist(nbound))
+      this%gwfpackages(ip)%nodelist => packobj%nodelist
+      allocate (this%gwfpackages(ip)%naux)
+      this%gwfpackages(ip)%naux => packobj%naux
+      allocate (this%gwfpackages(ip)%auxname(packobj%naux))
+      this%gwfpackages(ip)%auxname => packobj%auxname
+      allocate (this%gwfpackages(ip)%auxvar(packobj%naux, nbound))
+      this%gwfpackages(ip)%auxvar => packobj%auxvar
+      allocate (this%gwfpackages(ip)%flow(nbound))
+      this%gwfpackages(ip)%flow => packobj%simvals
+    end do
+    allocate (this%npf%bff)
+    call this%npf%bff%bff_df(this%dis, this%nflowpack, this%gwfpackages)   ! ugly
+    call this%npf%bff%bff_ar(this%ibound)
+    this%npf%xt3d%bff => this%npf%bff
+
   end subroutine gwf_ar
 
   !> @brief GroundWater Flow Model Read and Prepare
@@ -1093,6 +1126,9 @@ contains
       call packobj%bnd_da()
       deallocate (packobj)
     end do
+    !
+    deallocate (this%gwfpackages)
+    deallocate (this%nflowpack)
     !
     ! -- Scalars
     call mem_deallocate(this%inic)

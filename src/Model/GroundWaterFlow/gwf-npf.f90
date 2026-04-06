@@ -24,6 +24,8 @@ module GwfNpfModule
   use GwfConductanceUtilsModule, only: hcond, vcond, &
                                        condmean, thksatnm, &
                                        CCOND_HMEAN
+  use BffModule
+  use PackageBudgetModule
 
   implicit none
 
@@ -103,6 +105,8 @@ module GwfNpfModule
     integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+    !
+    type(BffType), pointer :: bff => NULL() ! boundary-face flows object
 
   contains
 
@@ -432,8 +436,8 @@ contains
         end do
       else
         !
-        ! -- Recompute XT3D coefficients for permanently confined connections
-        if (this%xt3d%lamatsaved .and. .not. this%xt3d%ldispersion) then
+        ! -- Recompute XT3D coefficients for permanently confined connections    ! can it still be treated as 'permanently confined'
+        if (this%xt3d%lamatsaved .and. .not. this%xt3d%ldispersion) then         ! if bff's are incorporated and they change with time?
           call this%xt3d%xt3d_fcpc(this%dis%nodes, .true.)
         end if
       end if
@@ -493,6 +497,7 @@ contains
     ! -- Calculate conductance and put into amat
     !
     if (this%ixt3d /= 0) then
+      call this%xt3d%bff%accumulate_flows()
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
       do n = 1, this%dis%nodes
@@ -1083,6 +1088,8 @@ contains
     call mem_deallocate(this%edge_idxs)
     call mem_deallocate(this%spdis, 'SPDIS', this%memoryPath)
     call mem_deallocate(this%nodekchange)
+    !
+    deallocate (this%bff)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

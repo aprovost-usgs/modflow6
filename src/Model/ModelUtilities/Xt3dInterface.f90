@@ -5,6 +5,7 @@ module Xt3dModule
   use BaseDisModule, only: DisBaseType
   use MemoryHelperModule, only: create_mem_path
   use MatrixBaseModule
+  use BffModule
   implicit none
 
   public Xt3dType
@@ -49,6 +50,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer, contiguous :: angle2 => null() !< k ellipse rotation up from xy plane around y axis (pitch)
     real(DP), dimension(:), pointer, contiguous :: angle3 => null() !< k tensor rotation around x axis (roll)
     logical, pointer :: ldispersion => null() !< flag to indicate dispersion
+    type(BffType), pointer :: bff => NULL() ! boundary-face flows object
 
   contains
 

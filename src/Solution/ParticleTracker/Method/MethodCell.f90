@@ -60,7 +60,7 @@ contains
 
     ! assigned boundary face with net outflow? terminate
     ic = particle%itrdomain(LEVEL_FEATURE)
-    if (this%fmi%is_net_out_boundary_face(ic, icellface)) then
+    if (this%fmi%bff%is_net_out_boundary_face(ic, icellface)) then
       call this%terminate(particle, status=TERM_BOUNDARY)
       return
     end if

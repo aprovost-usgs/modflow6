@@ -343,6 +343,7 @@ contains
         end if
       end if
       this%rhs(i) = -q
+      this%simvals(i) = q  ! temporary storage for the sake of bff
     end do
   end subroutine wel_cf
 

@@ -60,7 +60,7 @@ contains
     ! If the cell contains a water table that is not an
     ! assigned boundary face with upflow, cap flow at 0.
     itopface = this%fmi%max_faces ! fmi's lateral face indices are not closed
-    if (this%fmi%is_boundary_face(defn%icell, itopface)) return
+    if (this%fmi%bff%is_boundary_face(defn%icell, itopface)) return
     if (defn%isatstat == SATURATION_WATERTABLE) then
       itopface = defn%npolyverts + 3 ! cell defn's lateral face indices are closed
       defn%faceflow(itopface) = max(DZERO, defn%faceflow(itopface))
