@@ -120,10 +120,28 @@ contains
         chat1j(i) = wght1 * bhat1(i)
       end do
     end if
-  end subroutine qconds
+                    end subroutine qconds
 
   !> @brief Compute "ahat" and "bhat" coefficients for one side of an interface
-  !<
+  !!
+  !! bd = array of "B" coefficients used in calculating "beta" coefficients.
+  !! be = array of "B" coefficients used in calculating "beta" coefficients.
+  !! acd = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! add = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! aed = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! ace = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! aee = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! ade = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! alphad = "alpha" coefficient in the expressions for the perdendicular
+  !!          gradient components.
+  !! alphae = "alpha" coefficient in the expressions for the perdendicular
+  !!          gradient components.
+  !! betad = array of "beta" coefficients in the expressions for the
+  !!         perdendicular gradient components.
+  !! betae = array of "beta" coefficients in the expressions for the
+  !!         perdendicular gradient components.
+  !! ahat = "ahat" coefficient used in calculating "conductances".
+  !! bhat = array of "bhat" coefficients used in calculating "conductances".
   subroutine abhats(nnbrmx, nnbr, inbr, il01, vc, vn, dl0, dln, ck, &
                     vcthresh, allhc, ar01, ahat, bhat)
     ! -- dummy
@@ -190,15 +208,18 @@ contains
       !    0 and 1.
       call tranvc(nnbrmx, nnbr, rmat, vc, vccde)
       !
-      ! -- Get "a" and "b" weights for first perpendicular direction.
-      call abwts(nnbrmx, nnbr, inbr, il01, 2, vccde, &
+!!      ! -- Get "a" and "b" weights for first perpendicular direction.   ! kluge note: some comments in this subroutine edited/added for clarity
+      ! -- Get "A" and "B" coefficients for first perpendicular direction.
+!!      call abwts(nnbrmx, nnbr, inbr, il01, 2, vccde, &
+      call abcoefs(nnbrmx, nnbr, inbr, il01, 2, vccde, &
                  vcthresh, dl0, dln, acd, add, aed, bd)
       !
       ! -- If all neighboring connections are user-designated as horizontal, or
       !    if none have a non-negligible component in the second perpendicular
       !    direction, assume zero gradient in the second perpendicular direction.
-      !    Otherwise, get "a" and "b" weights for second perpendicular direction
-      !    based on neighboring connections.
+!!      !    Otherwise, get "a" and "b" weights for second perpendicular direction
+      !    Otherwise, get "A" and "B" coefficients for second perpendicular
+      !    direction based on neighboring connections.
       if (allhc) then
         ace = 0d0
         aee = 1d0
@@ -215,7 +236,8 @@ contains
           end if
         end do
         if (iscomp) then
-          call abwts(nnbrmx, nnbr, inbr, il01, 3, vccde, &
+!!          call abwts(nnbrmx, nnbr, inbr, il01, 3, vccde, &
+          call abcoefs(nnbrmx, nnbr, inbr, il01, 3, vccde, &
                      vcthresh, dl0, dln, ace, aee, ade, be)
         else
           ace = 0d0
@@ -239,7 +261,8 @@ contains
         betae(il) = (be(il) * add - bd(il) * ade) * oodet
       end do
       !
-      ! -- Compute sigma coefficients.
+!!      ! -- Compute sigma coefficients.
+      ! -- Compute sigma vector.
       sigma = matmul(vn(il01, :), matmul(ck, rmat))
       !
       ! -- Compute ahat and bhat coefficients.
@@ -375,18 +398,24 @@ contains
     end do
   end subroutine tranvc
 
-  !> @brief Compute "a" and "b" weights for the local connections with respect
-  !! to the perpendicular direction of primary interest.
+!!  !> @brief Compute "a" and "b" weights for the local connections with respect
+!!  !! to the perpendicular direction of primary interest.    ! kluge note: some comments in this subroutine edited/added for clarity
+  !> @brief Compute "A" and "B" coefficients for the local connections with
+  !! respect to the perpendicular direction of primary interest.
   !!
   !! nde1 = number that indicates the perpendicular direction of primary
   !!        interest on this call: "d" (2) or "e" (3).
   !! vccde = array of connection unit-vectors with respect to (c, d, e)
   !!         coordinates.
-  !! bd = array of "b" weights.
-  !! aed = "a" weight that goes on the matrix side of the 2x2 problem.
-  !! acd = "a" weight that goes on the right-hand side of the 2x2 problem.
+!!  !! bd = array of "b" weights.
+!!  !! aed = "a" weight that goes on the matrix side of the 2x2 problem.
+!!  !! acd = "a" weight that goes on the right-hand side of the 2x2 problem.
+  !! bd = array of "B" coefficients used in calculating "beta" coefficients.
+  !! aed = "A" coefficient used in calculating "alpha" and "beta" coefficients.
+  !! acd = "A" coefficient used in calculating "alpha" and "beta" coefficients.
   !<
-  subroutine abwts(nnbrmx, nnbr, inbr, il01, nde1, vccde, &
+!!  subroutine abwts(nnbrmx, nnbr, inbr, il01, nde1, vccde, &
+  subroutine abcoefs(nnbrmx, nnbr, inbr, il01, nde1, vccde, &   ! renamed for clarity
                    vcthresh, dl0, dln, acd, add, aed, bd)
     ! -- dummy
     integer(I4B) :: nnbrmx
@@ -410,17 +439,23 @@ contains
     real(DP) :: cosang
     real(DP) :: dl4wt
     real(DP) :: fact
-    real(DP) :: dsum
-    real(DP) :: oodsum
+!!    real(DP) :: dsum    ! kluge note: replaced by two separate variables for clarification
+!!    real(DP) :: oodsum
+    real(DP) :: dcsum
+    real(DP) :: omcsum
+    real(DP) :: ooomcsum
     real(DP) :: fatten
     real(DP), dimension(nnbrmx) :: omwt
+    real(DP), dimension(nnbrmx) :: phiwt    ! kluge debug
+    real(DP) :: phisum                      ! kluge debug
     !
     ! -- Set the perpendicular direction of secondary interest.
     nde2 = 5 - nde1
     !
     ! -- Begin computing "omega" weights.
     omwt = 0d0
-    dsum = 0d0
+!!    dsum = 0d0
+    dcsum = 0d0
     vcmx = 0d0
     do il = 1, nnbr
       ! -- If this is connection (0,1) or inactive, skip.
@@ -429,46 +464,80 @@ contains
       dlm = 5d-1 * (dl0(il) + dln(il))
       ! -- Distance-based weighting.  dl4wt is the distance between the point
       !    supplying the gradient information and the point at which the flux is
-      !    being estimated. Could be coded as a special case of resistance-based
-      !    weighting (by setting the conductivity matrix to be the identity
-      !    matrix), but this is more efficient.
+!!      !    being estimated. Could be coded as a special case of resistance-based
+!!      !    weighting (by setting the conductivity matrix to be the identity
+!!      !    matrix), but this is more efficient.
+      !    being estimated.
       cosang = vccde(il, 1)
       dl4wt = dsqrt(dlm * dlm + dl0(il01) * dl0(il01) &
                     - 2d0 * dlm * dl0(il01) * cosang)
+      ! -- The "omega" weights calculated immediately below are an intermediate
+      ! -- result.  The calculation of omega weights is finished in the next
+      ! -- loop.
       omwt(il) = dabs(vccde(il, nde1)) * dl4wt
-      dsum = dsum + omwt(il)
+!!      dsum = dsum + omwt(il)
+      dcsum = dcsum + omwt(il)
     end do
     !
     ! -- Finish computing non-normalized "omega" weights.  [Add a tiny bit to
-    !    dsum so that the normalized omega weight later evaluates to
+!!    !    dsum so that the normalized omega weight later evaluates to
+    !    dcsum so that the normalized omega weight later evaluates to
     !    (essentially) 1 in the case of a single relevant connection, avoiding
     !    0/0.]
-    dsum = dsum + 1d-10 * dsum
+!!    dsum = dsum + 1d-10 * dsum
+    dcsum = dcsum + 1d-10 * dcsum
+    phiwt = 0d0                                       ! kluge debug
+    phisum = 0d0                                      ! kluge debug
     do il = 1, nnbr
       ! -- If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
-      fact = dsum - omwt(il)
+      ! -- The "omega" weights calculated below are not divided by dcsum. This
+      ! -- differs from the definition in the XT3D documentation (T&M6-A56).
+      ! -- In the end, the factor of 1/dcsum would cancel out anyway, so
+      ! -- omitting it here leads to equivalent math and is more efficient.
+      ! -- It seemed more intuitive to define them with the division by dcsum,
+      ! -- but they could have been defined without it, since they do not
+      ! -- sum to 1 anyway.
+!!      fact = dsum - omwt(il)
+      fact = dcsum - omwt(il)
       omwt(il) = fact * dabs(vccde(il, nde1))
+!!      if ((inbr(il) == -1) .and. (omwt(il) .gt. 1d-10)) omwt(il) = omwt(il) * 0.1e+0       ! kluge test
+!!      if (inbr(il) == -1) omwt(il) = 0.d0                   ! kluge test
+      phiwt(il) = omwt(il) * dabs(vccde(il, nde1))    ! kluge debug
+      phisum = phisum + phiwt(il)                     ! kluge debug
     end do
+    phiwt = phiwt / phisum    ! kluge debug (phiwt is not used in calculations; just for debugging)
     !
-    ! -- Compute "b" weights.
+!!    ! -- Compute "b" weights.
+    ! -- Compute "B" coefficients.
     bd = 0d0
-    dsum = 0d0
+!!    dsum = 0d0
+    omcsum = 0d0
     do il = 1, nnbr
       ! -- If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
+      ! -- Although the "phi" weights are not calculated explicitly, the math
+      ! -- here is equivalent to what is described in the XT3D documentation
+      ! -- (T&M6-A56).  The "B" coefficients calculated immediately below are an
+      ! -- intermediate result.  The calculation of B coefficients is finished
+      ! -- in the next loop.
       bd(il) = omwt(il) * sign(1d0, vccde(il, nde1))
-      dsum = dsum + omwt(il) * dabs(vccde(il, nde1))
+!!      dsum = dsum + omwt(il) * dabs(vccde(il, nde1))
+      omcsum = omcsum + omwt(il) * dabs(vccde(il, nde1))
     end do
     !
-    oodsum = 1d0 / dsum
+    ! -- Finish computing "B" coefficients by dividing by omcsum.
+!!    oodsum = 1d0 / dsum
+    ooomcsum = 1d0 / omcsum
     do il = 1, nnbr
       ! -- If this is connection (0,1) or inactive, skip.
       if ((il .eq. il01) .or. (inbr(il) .eq. 0)) cycle
-      bd(il) = bd(il) * oodsum
+!!      bd(il) = bd(il) * oodsum
+      bd(il) = bd(il) * ooomcsum
     end do
     !
-    ! -- Compute "a" weights.
+!!    ! -- Compute "a" weights.
+    ! -- Compute "A" coefficients.
     add = 1d0
     acd = 0d0
     aed = 0d0
@@ -487,6 +556,7 @@ contains
       bd = bd * fatten
     end if
     !
-  end subroutine abwts
+!!  end subroutine abwts
+    end subroutine abcoefs
 
 end module Xt3dAlgorithmModule

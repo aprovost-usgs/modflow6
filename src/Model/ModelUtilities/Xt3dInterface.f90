@@ -1,11 +1,13 @@
 module Xt3dModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP        ! kluge LGP
   use ConstantsModule, only: DZERO, DHALF, DONE, LENMEMPATH
   use BaseDisModule, only: DisBaseType
   use MemoryHelperModule, only: create_mem_path
   use MatrixBaseModule
   use BffModule
+  use GeomUtilModule, only: get_jk
+  use DisvGeom, only: line_unit_vector
   implicit none
 
   public Xt3dType
@@ -51,6 +53,7 @@ module Xt3dModule
     real(DP), dimension(:), pointer, contiguous :: angle3 => null() !< k tensor rotation around x axis (roll)
     logical, pointer :: ldispersion => null() !< flag to indicate dispersion
     type(BffType), pointer :: bff => NULL() ! boundary-face flows object
+    integer(I4B), pointer :: kluge_option => null() !< kluge option (set via xt3d rhs option)
 
   contains
 
@@ -68,6 +71,7 @@ module Xt3dModule
     procedure, private :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: xt3d_load
+    procedure, private :: xt3d_load_bfgrad
     procedure, private :: xt3d_load_inbr
     procedure, private :: xt3d_indices
     procedure, private :: xt3d_areas
@@ -81,6 +85,8 @@ module Xt3dModule
     procedure, private :: xt3d_rhs
     procedure, private :: xt3d_fillrmatck
     procedure, private :: xt3d_qnbrs
+    procedure, private :: xt3d_combine
+    procedure, private :: xt3d_split
 
   end type Xt3dType
 
@@ -275,7 +281,8 @@ contains
   !> @brief Allocate and Read
   !<
   subroutine xt3d_ar(this, ibound, k11, ik33, k33, sat, ik22, k22, iangle1, &
-                     iangle2, iangle3, angle1, angle2, angle3, inewton, icelltype)
+                     iangle2, iangle3, angle1, angle2, angle3, inewton, icelltype, &
+                     kluge_option)   ! kluge option
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
@@ -296,6 +303,7 @@ contains
     integer(I4B), intent(in), pointer, optional :: inewton
     integer(I4B), dimension(:), intent(in), pointer, &
       contiguous, optional :: icelltype
+    integer(I4B), intent(in), pointer, optional :: kluge_option
     ! -- local
     integer(I4B) :: n, nnbrs
     ! -- formats
@@ -321,6 +329,12 @@ contains
     this%angle1 => angle1
     this%angle2 => angle2
     this%angle3 => angle3
+    if (present(kluge_option)) then
+      this%kluge_option => kluge_option
+    else
+      allocate (this%kluge_option)
+      this%kluge_option = 0
+    end if
     !
     if (present(inewton)) then
       ! -- inewton is not needed for transport so it's optional.
@@ -392,14 +406,31 @@ contains
     real(DP) :: ar01, ar10
     real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
     real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    integer(I4B) :: nbff0, nbff1
+    integer(I4B), dimension(this%bff%max_faces) :: ibff0, ibff1
+    real(DP), dimension(this%bff%max_faces, 3) :: vcbff0, vnbff0, vcbff1, vnbff1
+    real(DP), dimension(this%bff%max_faces) :: dlbff0, dlbff0n, dlbff1, dlbff1n
+    real(DP), dimension(this%bff%max_faces) :: bfgrad0, bfgrad1
+    integer(I4B) :: ncmbmax
+    integer(I4B) :: ncmb0, ncmb1
+    integer(I4B), dimension(this%nbrmax + this%bff%max_faces) :: icmb0, icmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb0, vncmb0
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb1, vncmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb0, dlcmb0n
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb1, dlcmb1n
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
+    real(DP), dimension(this%bff%max_faces) :: chatbffi0, chatbff1j
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: chatcmbi0, chatcmb1j
     real(DP) :: qnm, qnbrs
+    integer(I4B) :: p, il, nnbrp    ! kluge
     !
     ! -- Calculate xt3d conductance-like coefficients and put into amat and rhs
     ! -- as appropriate
     !
+!!    call this%bff%accumulate_flows()
+!!    !
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (this%lamatsaved) then
@@ -422,6 +453,8 @@ contains
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
                           ck0, allhc0)
+      call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
+                                 vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
       ! -- Loop over active neighbors of cell 0 that have a higher
       !    cell number (taking advantage of reciprocity).
       do il0 = 1, nnbr0
@@ -435,6 +468,8 @@ contains
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
                             ck1, allhc1)
+        call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
+                                   vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                                ii00, ii11, ii10)
@@ -447,9 +482,72 @@ contains
         end if
         ! -- Compute "conductances" for interface between
         !    cells 0 and 1.
-        call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+        if (nbff0 + nbff1 == 0) then
+          call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
+                      nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
+                      this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+          
+          ! ==================================================================
+          ! no-flux boundary kluge (for use with fringe)
+          if (this%kluge_option == 1) then
+            !!print *, n, nnbr0
+            ! boundary-cell neighbors of cell n (if n is itself not a boundary cell)
+            if (nnbr0 == 4) then
+              do il = 1, nnbr0
+                ipos = this%dis%con%ia(n) + il
+                if (this%dis%con%mask(ipos) == 0) cycle
+                p = inbr0(il)
+                ! -- Skip if neighbor is inactive or has lower cell number.
+                if ((p .eq. 0) .or. (p .lt. n)) cycle
+                ! -- skip primary neighbor
+                if (p .eq. m) cycle
+                nnbrp = this%dis%con%ia(p + 1) - this%dis%con%ia(p) - 1
+                ! -- zero out coefficient if neighbor p is a boundary cell
+                if (nnbrp < 4) then
+                  !!print *, n, "--", p, ":", nnbrp
+                  chati0(il) = DZERO
+                end if
+              end do
+            end if
+            ! boundary-cell neighbors of cell m (if m is itself not a boundary cell);
+            ! using p as the neighbor again just to avoid q
+            if (nnbr1 == 4) then
+              do il = 1, nnbr1
+                ipos = this%dis%con%ia(m) + il
+                if (this%dis%con%mask(ipos) == 0) cycle
+                p = inbr1(il)
+                ! -- Skip if neighbor is inactive or has lower cell number.
+                if ((p .eq. 0) .or. (p .lt. m)) cycle
+                ! -- skip primary neighbor
+                if (p .eq. n) cycle
+                nnbrp = this%dis%con%ia(p + 1) - this%dis%con%ia(p) - 1
+                ! -- zero out coefficient if neighbor p is a boundary cell
+                if (nnbrp < 4) then
+                  !!print *, m, "--", p, ":", nnbrp
+                  chat1j(il) = DZERO
+                end if
+              end do
+            end if
+          end if
+          ! ===============================================================
+          
+        else
+          call this%xt3d_combine(nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
+                                 nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
+                                 nbff0, ibff0, vcbff0, vnbff0, dlbff0, dlbff0n, &
+                                 nbff1, ibff1, vcbff1, vnbff1, dlbff1, dlbff1n, &
+                                 ncmb0, icmb0, vccmb0, vncmb0, dlcmb0, dlcmb0n, &
+                                 ncmb1, icmb1, vccmb1, vncmb1, dlcmb1, dlcmb1n)
+          ncmbmax = this%nbrmax + this%bff%max_faces
+          call qconds(ncmbmax, &
+                      ncmb0, icmb0, il01, vccmb0, vncmb0, dlcmb0, dlcmb0n, ck0, &
+                      ncmb1, icmb1, il10, vccmb1, vncmb1, dlcmb1, dlcmb1n, ck1, &
+                      ar01, ar10, this%vcthresh, allhc0, allhc1, &
+                      chat01, chatcmbi0, chatcmb1j)
+          call this%xt3d_split(nnbr0, chati0, nnbr1, chat1j, &
+                               nbff0, chatbffi0, nbff1, chatbff1j, &
+                               ncmb0, chatcmbi0, ncmb1, chatcmb1j)
+        end if
         ! -- If Newton, compute and save saturated flow, then scale
         !    conductance-like coefficients by the actual area for
         !    subsequent amat and rhs assembly.
@@ -816,6 +914,21 @@ contains
     real(DP), dimension(3, 3) :: ck0, ck1
     real(DP) :: chat01
     real(DP), dimension(this%nbrmax) :: chati0, chat1j
+    integer(I4B) :: nbff0, nbff1
+    integer(I4B), dimension(this%bff%max_faces) :: ibff0, ibff1
+    real(DP), dimension(this%bff%max_faces, 3) :: vcbff0, vnbff0, vcbff1, vnbff1
+    real(DP), dimension(this%bff%max_faces) :: dlbff0, dlbff0n, dlbff1, dlbff1n
+    real(DP), dimension(this%bff%max_faces) :: bfgrad0, bfgrad1
+    integer(I4B) :: ncmbmax
+    integer(I4B) :: ncmb0, ncmb1
+    integer(I4B), dimension(this%nbrmax + this%bff%max_faces) :: icmb0, icmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb0, vncmb0
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb1, vncmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb0, dlcmb0n
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb1, dlcmb1n
+    real(DP), dimension(this%bff%max_faces) :: chatbffi0, chatbff1j
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: chatcmbi0, chatcmb1j
+    integer(I4B) :: p, il, nnbrp    ! kluge
     !
     ! -- Calculate the flow across each cell face and store in flowja
     nodes = this%dis%nodes
@@ -828,6 +941,8 @@ contains
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
                           ck0, allhc0)
+      call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
+                                 vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
       !
       ! -- Loop over active neighbors of cell 0 that have a higher
       !    cell number (taking advantage of reciprocity).
@@ -841,6 +956,8 @@ contains
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
                             ck1, allhc1)
+        call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
+                            vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
         !
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
@@ -853,9 +970,72 @@ contains
         !
         ! -- Compute "conductances" for interface between
         !    cells 0 and 1.
-        call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
-                    nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
-                    this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+        if (nbff0 + nbff1 == 0) then
+          call qconds(this%nbrmax, nnbr0, inbr0, il01, vc0, vn0, dl0, dl0n, ck0, &
+                      nnbr1, inbr1, il10, vc1, vn1, dl1, dl1n, ck1, ar01, ar10, &
+                      this%vcthresh, allhc0, allhc1, chat01, chati0, chat1j)
+          
+          ! ==================================================================
+          ! no-flux boundary kluge (for use with fringe)
+          if (this%kluge_option == 1) then
+            !!print *, n, nnbr0
+            ! boundary-cell neighbors of cell n (if n is itself not a boundary cell)
+            if (nnbr0 == 4) then
+              do il = 1, nnbr0
+                ipos = this%dis%con%ia(n) + il
+                if (this%dis%con%mask(ipos) == 0) cycle
+                p = inbr0(il)
+                ! -- Skip if neighbor is inactive or has lower cell number.
+                if ((p .eq. 0) .or. (p .lt. n)) cycle
+                ! -- skip primary neighbor
+                if (p .eq. m) cycle
+                nnbrp = this%dis%con%ia(p + 1) - this%dis%con%ia(p) - 1
+                ! -- zero out coefficient if neighbor p is a boundary cell
+                if (nnbrp < 4) then
+                  !!print *, n, "--", p, ":", nnbrp
+                  chati0(il) = DZERO
+                end if
+              end do
+            end if
+            ! boundary-cell neighbors of cell m (if m is itself not a boundary cell);
+            ! using p as the neighbor again just to avoid q
+            if (nnbr1 == 4) then
+              do il = 1, nnbr1
+                ipos = this%dis%con%ia(m) + il
+                if (this%dis%con%mask(ipos) == 0) cycle
+                p = inbr1(il)
+                ! -- Skip if neighbor is inactive or has lower cell number.
+                if ((p .eq. 0) .or. (p .lt. m)) cycle
+                ! -- skip primary neighbor
+                if (p .eq. n) cycle
+                nnbrp = this%dis%con%ia(p + 1) - this%dis%con%ia(p) - 1
+                ! -- zero out coefficient if neighbor p is a boundary cell
+                if (nnbrp < 4) then
+                  !!print *, m, "--", p, ":", nnbrp
+                  chat1j(il) = DZERO
+                end if
+              end do
+            end if
+          end if
+          ! ===============================================================
+          
+        else
+          call this%xt3d_combine(nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
+                                 nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
+                                 nbff0, ibff0, vcbff0, vnbff0, dlbff0, dlbff0n, &
+                                 nbff1, ibff1, vcbff1, vnbff1, dlbff1, dlbff1n, &
+                                 ncmb0, icmb0, vccmb0, vncmb0, dlcmb0, dlcmb0n, &
+                                 ncmb1, icmb1, vccmb1, vncmb1, dlcmb1, dlcmb1n)
+          ncmbmax = this%nbrmax + this%bff%max_faces
+          call qconds(ncmbmax, &
+                      ncmb0, icmb0, il01, vccmb0, vncmb0, dlcmb0, dlcmb0n, ck0, &
+                      ncmb1, icmb1, il10, vccmb1, vncmb1, dlcmb1, dlcmb1n, ck1, &
+                      ar01, ar10, this%vcthresh, allhc0, allhc1, &
+                      chat01, chatcmbi0, chatcmb1j)
+          call this%xt3d_split(nnbr0, chati0, nnbr1, chat1j, &
+                               nbff0, chatbffi0, nbff1, chatbff1j, &
+                               ncmb0, chatcmbi0, ncmb1, chatcmb1j)
+        end if
         !
         ! -- Contribution to flow from primary connection.
         qnm = chat01 * (hnew(m) - hnew(n))
@@ -1169,10 +1349,11 @@ contains
           exit
         end if
       end do
+      this%lamatsaved = .false.   ! kluge for bff testing
     end if
     !
     if (.not. this%lamatsaved) then
-      ! there are no permanently confined connections so deallocate iallpc
+      ! there are no permanently confined connections so deallocate iallpc   ! should this say "not all connections are permanently confined so ..."?
       ! in order to save memory
       call mem_reallocate(this%iallpc, 0, 'IALLPC', this%memoryPath)
     end if
@@ -1273,6 +1454,95 @@ contains
       end if
     end do
   end subroutine xt3d_load
+
+  !> @brief Load bff info for a cell into arrays used by XT3D
+  !<
+  subroutine xt3d_load_bfgrad(this, ck, allhc, nodes, n, nbff, ibff, &
+                              vcbff, vnbff, dlbff, dlbffn, bfgrad)
+    ! -- module
+    use ConstantsModule, only: DZERO, DHALF, DONE, DTWO, DPI
+    ! -- dummy
+    class(Xt3dType) :: this
+    real(DP), dimension(3, 3) :: ck
+    logical :: allhc
+    integer(I4B), intent(in) :: nodes
+    integer(I4B) :: n, nbff
+    integer(I4B), dimension(this%bff%max_faces) :: ibff
+    real(DP), dimension(this%bff%max_faces, 3) :: vcbff, vnbff
+    real(DP), dimension(this%bff%max_faces) :: dlbff, dlbffn
+    real(DP), dimension(this%bff%max_faces) :: bfgrad
+    ! -- local
+    integer(I4B) :: il, icellface
+    real(DP), allocatable :: polyverts(:, :)
+    real(DP) :: x1, y1, x2, y2, dx, dy, ax
+    real(DP) :: kappamag
+!!    integer(I4B) :: noden !< cell (reduced nn)
+!!    integer(I4B) :: nodem !< neighbor (reduced nn)
+    real(DP) :: xcomp
+    real(DP) :: ycomp
+    real(DP) :: zcomp
+    real(DP) :: conlen
+!!    integer(I4B) :: nodeu, ncell2d, mcell2d, k
+    real(DP) :: xn, xm, yn, ym, zn, zm, dz, area, q
+    !
+    ! -- load bff gradients
+    call this%dis%get_polyverts(n, polyverts, closed=.true.)
+    il = 0
+    do icellface = 1, this%bff%max_faces
+      if (this%bff%is_boundary_face(n, icellface)) then
+        il = il + 1
+        ibff(il) = -1   ! arbitrary marker
+        ! -- DISV and DIS
+        dz = this%dis%top(n) - this%dis%bot(n)   ! should this take into account saturation?
+        if (icellface < this%bff%max_faces - 1) then
+          ! -- lateral face
+          x1 = polyverts(1, icellface)
+          y1 = polyverts(2, icellface)
+          x2 = polyverts(1, icellface + 1)
+          y2 = polyverts(2, icellface + 1)
+          dx = x2 - x1
+          dy = y2 - y1
+          ax = atan2(dx, -dy)
+          if (ax < DZERO) ax = DTWO * DPI + ax
+          vnbff(il, 1) = cos(ax)
+          vnbff(il, 2) = sin(ax)
+          vnbff(il, 3) = DZERO
+          xn = this%dis%xc(n)
+          yn = this%dis%yc(n)
+          zn = DZERO
+          xm = DHALF * (x1 + x2)
+          ym = DHALF * (y1 + y2)
+          zm = DZERO
+          call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
+                            conlen)
+          dlbff(il) = conlen
+          area = sqrt(dx * dx + dy * dy) * dz
+        else
+          ! -- top or bottom
+          vnbff(il, 1) = DZERO
+          vnbff(il, 2) = DZERO
+          if (icellface == this%bff%max_faces - 1) then
+            ! -- bottom
+            vnbff(il, 3) = -DONE
+          else
+            ! -- top
+            vnbff(il, 3) = DONE
+          end if
+          dlbff(il) = DHALF * dz
+          area = this%dis%area(n)
+          allhc = .false.
+        end if
+        dlbffn(il) = dlbff(il)   ! gradient info is centered on face
+        vcbff(il, :) = matmul(ck(:, :), vnbff(il, :))    ! kappa vector (NOT normalized)
+        kappamag = norm2(vcbff(il, :))
+        vcbff(il, :) = vcbff(il, :) / kappamag           ! now it's normalized
+        q = this%bff%BoundaryFlows(n, icellface) / area
+        bfgrad(il) = q / kappamag   ! should this be plus or minus?   ! not yet used; assumption for now is q=0
+      end if
+    end do
+    nbff = il
+    if (allocated(polyverts)) deallocate (polyverts)
+  end subroutine xt3d_load_bfgrad
 
   !> @brief Load neighbor list for a cell.
   !<
@@ -1611,5 +1881,81 @@ contains
     this%rmatck(3, 2) = -c2 * s3
     this%rmatck(3, 3) = c2 * c3
   end subroutine xt3d_fillrmatck
+  
+  !> @brief Combine connection and bff info
+  subroutine xt3d_combine(this, &
+                          nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
+                          nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
+                          nbff0, ibff0, vcbff0, vnbff0, dlbff0, dlbff0n, &
+                          nbff1, ibff1, vcbff1, vnbff1, dlbff1, dlbff1n, &
+                          ncmb0, icmb0, vccmb0, vncmb0, dlcmb0, dlcmb0n, &
+                          ncmb1, icmb1, vccmb1, vncmb1, dlcmb1, dlcmb1n)
+    ! -- dummy
+    class(Xt3dType) :: this
+    integer(I4B) :: nnbr0, nnbr1
+    integer(I4B), dimension(this%nbrmax) :: inbr0, inbr1
+    real(DP), dimension(this%nbrmax, 3) :: vc0, vn0, vc1, vn1
+    real(DP), dimension(this%nbrmax) :: dl0, dl0n, dl1, dl1n
+    integer(I4B) :: nbff0, nbff1
+    integer(I4B), dimension(this%bff%max_faces) :: ibff0, ibff1
+    real(DP), dimension(this%bff%max_faces, 3) :: vcbff0, vnbff0, vcbff1, vnbff1
+    real(DP), dimension(this%bff%max_faces) :: dlbff0, dlbff0n, dlbff1, dlbff1n
+    integer(I4B) :: ncmb0, ncmb1
+    integer(I4B), dimension(this%nbrmax + this%bff%max_faces) :: icmb0, icmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb0, vncmb0
+    real(DP), dimension(this%nbrmax + this%bff%max_faces, 3) :: vccmb1, vncmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb0, dlcmb0n
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: dlcmb1, dlcmb1n
+    !
+    icmb0(1:nnbr0) = inbr0(1:nnbr0)
+    vccmb0(1:nnbr0, :) = vc0(1:nnbr0, :)
+    vncmb0(1:nnbr0, :) = vn0(1:nnbr0, :)
+    dlcmb0(1:nnbr0) = dl0(1:nnbr0)
+    dlcmb0n(1:nnbr0) = dl0n(1:nnbr0)
+    if (nbff0 > 0) then
+      ncmb0 = nnbr0 + nbff0
+      icmb0(nnbr0 + 1:nnbr0 + nbff0) = ibff0(1:nbff0)
+      vccmb0(nnbr0 + 1:nnbr0 + nbff0, :) = vcbff0(1:nbff0, :)
+      vncmb0(nnbr0 + 1:nnbr0 + nbff0, :) = vnbff0(1:nbff0, :)
+      dlcmb0(nnbr0 + 1:nnbr0 + nbff0) = dlbff0(1:nbff0)
+      dlcmb0n(nnbr0 + 1:nnbr0 + nbff0) = dlbff0n(1:nbff0)
+    else
+      ncmb0 = nnbr0
+    end if
+      icmb1(1:nnbr1) = inbr1(1:nnbr1)
+      vccmb1(1:nnbr1, :) = vc1(1:nnbr1, :)
+      vncmb1(1:nnbr1, :) = vn1(1:nnbr1, :)
+      dlcmb1(1:nnbr1) = dl1(1:nnbr1)
+      dlcmb1n(1:nnbr1) = dl1n(1:nnbr1)
+    if (nbff1 > 0) then
+      ncmb1 = nnbr1 + nbff1
+      icmb1(nnbr1 + 1:nnbr1 + nbff1) = ibff1(1:nbff1)
+      vccmb1(nnbr1 + 1:nnbr1 + nbff1, :) = vcbff1(1:nbff1, :)
+      vncmb1(nnbr1 + 1:nnbr1 + nbff1, :) = vnbff1(1:nbff1, :)
+      dlcmb1(nnbr1 + 1:nnbr1 + nbff1) = dlbff1(1:nbff1)
+      dlcmb1n(nnbr1 + 1:nnbr1 + nbff1) = dlbff1n(1:nbff1)
+    else
+      ncmb1 = nnbr1
+    end if
+  end subroutine xt3d_combine
+
+  !> @brief Split chat coefficients between connections and bffs
+  subroutine xt3d_split(this, nnbr0, chati0, nnbr1, chat1j, &
+                        nbff0, chatbffi0, nbff1, chatbff1j, &
+                        ncmb0, chatcmbi0, ncmb1, chatcmb1j)
+    ! -- dummy
+    class(Xt3dType) :: this
+    integer(I4B) :: nnbr0, nnbr1
+    real(DP), dimension(this%nbrmax) :: chati0, chat1j
+    integer(I4B) :: nbff0, nbff1
+    real(DP), dimension(this%bff%max_faces) :: chatbffi0, chatbff1j
+    integer(I4B) :: ncmb0, ncmb1
+    real(DP), dimension(this%nbrmax + this%bff%max_faces) :: chatcmbi0, chatcmb1j
+    !
+    chati0(1:nnbr0) = chatcmbi0(1:nnbr0)
+    chat1j(1:nnbr1) = chatcmb1j(1:nnbr1)
+    chatbffi0(1:nbff0) = chatcmbi0(nnbr0 + 1:nnbr0 + nbff0)
+    chatbff1j(1:nbff1) = chatcmb1j(nnbr1 + 1:nnbr1 + nbff1)
+  end subroutine xt3d_split
 
 end module Xt3dModule

@@ -24,8 +24,8 @@ module GwfNpfModule
   use GwfConductanceUtilsModule, only: hcond, vcond, &
                                        condmean, thksatnm, &
                                        CCOND_HMEAN
-  use BffModule
   use PackageBudgetModule
+  use BffModule
 
   implicit none
 
@@ -63,6 +63,8 @@ module GwfNpfModule
     real(DP), pointer :: hdry => null() !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< confined (0) or convertible (1)
     integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag => null() !< array of flags for handling the thickstrt option
+    integer(I4B), pointer :: kluge_option => null() !< kluge option (set via xt3d rhs option)
+    type(BffType), pointer :: bff => NULL() ! boundary-face flows object
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous :: k11 => null() !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -105,8 +107,6 @@ module GwfNpfModule
     integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
-    !
-    type(BffType), pointer :: bff => NULL() ! boundary-face flows object
 
   contains
 
@@ -354,7 +354,7 @@ contains
                              this%sat, this%ik22, this%k22, &
                              this%iangle1, this%iangle2, this%iangle3, &
                              this%angle1, this%angle2, this%angle3, &
-                             this%inewton, this%icelltype)
+                             this%inewton, this%icelltype, this%kluge_option)   ! kluge option
     end if
     !
     ! -- TVK
@@ -496,8 +496,10 @@ contains
     !
     ! -- Calculate conductance and put into amat
     !
+    ! accumulate bff flows
+    call this%bff%accumulate_flows()
+    !
     if (this%ixt3d /= 0) then
-      call this%xt3d%bff%accumulate_flows()
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
       do n = 1, this%dis%nodes
@@ -1032,6 +1034,7 @@ contains
     call mem_deallocate(this%iname)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%ixt3drhs)
+    call mem_deallocate(this%kluge_option)     ! kluge option
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1089,8 +1092,6 @@ contains
     call mem_deallocate(this%spdis, 'SPDIS', this%memoryPath)
     call mem_deallocate(this%nodekchange)
     !
-    deallocate (this%bff)
-    !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
 
@@ -1117,6 +1118,7 @@ contains
     call mem_allocate(this%iname, 'INAME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
+    call mem_allocate(this%kluge_option, 'KLUGE_OPTION', this%memoryPath)   ! kluge_option
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
@@ -1157,6 +1159,7 @@ contains
     this%iname = 8
     this%ixt3d = 0
     this%ixt3drhs = 0
+    this%kluge_option = 0   ! kluge option
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1413,6 +1416,14 @@ contains
     !
     ! -- xt3d active with rhs
     if (found%ixt3d .and. found%ixt3drhs) this%ixt3d = 2
+    !
+    if (this%ixt3d == 2) then    ! kluge option passed in via x3td rhs option
+      this%ixt3d = 1
+      this%ixt3drhs = 0
+      this%kluge_option = 1
+    else
+      this%kluge_option = 0
+    end if
     !
     ! -- save specific discharge active
     if (found%isavspdis) this%icalcspdis = this%isavspdis
@@ -2452,6 +2463,8 @@ contains
   subroutine calc_spdis(this, flowja)
     ! -- modules
     use SimModule, only: store_error
+    use ConstantsModule, only: DPI
+    use DisvGeom, only: line_unit_vector
     ! -- dummy
     class(GwfNpfType) :: this
     real(DP), intent(in), dimension(:) :: flowja
@@ -2490,6 +2503,18 @@ contains
     real(DP) :: ayx
     logical :: nozee = .true.
     type(SpdisWorkArrayType), pointer :: swa => null() !< pointer to spdis work arrays structure
+    integer(I4B) :: il, icellface
+    real(DP), allocatable :: polyverts(:, :)
+    real(DP) :: x1, y1, x2, y2, dx, dy, ax
+    real(DP) :: kappamag
+!!    integer(I4B) :: noden !< cell (reduced nn)
+!!    integer(I4B) :: nodem !< neighbor (reduced nn)
+    real(DP) :: xcomp
+    real(DP) :: ycomp
+    real(DP) :: zcomp
+    real(DP) :: conlen
+!!    integer(I4B) :: nodeu, ncell2d, mcell2d, k
+    real(DP) :: xm, ym, zm, q
     !
     ! -- Ensure dis has necessary information
     if (this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
@@ -2598,6 +2623,54 @@ contains
           end if
         end do
       end if
+      !
+      ! add contribution from bff's
+      call this%dis%get_polyverts(n, polyverts, closed=.true.)
+      do icellface = 1, this%xt3d%bff%max_faces
+        if (this%xt3d%bff%is_boundary_face(n, icellface)) then
+          q = this%xt3d%bff%BoundaryFlows(n, icellface)
+          ! -- DISV and DIS
+          dz = this%dis%top(n) - this%dis%bot(n)   ! should this take into account saturation?
+          if (icellface < this%xt3d%bff%max_faces - 1) then
+            ! -- lateral face
+            ic = ic + 1
+            x1 = polyverts(1, icellface)
+            y1 = polyverts(2, icellface)
+            x2 = polyverts(1, icellface + 1)
+            y2 = polyverts(2, icellface + 1)
+            dx = x2 - x1
+            dy = y2 - y1
+            ax = atan2(dx, -dy)
+            if (ax < DZERO) ax = DTWO * DPI + ax
+            swa%nix(ic) = cos(ax)
+            swa%niy(ic) = sin(ax)
+            xn = this%dis%xc(n)
+            yn = this%dis%yc(n)
+            zn = DZERO
+            xm = DHALF * (x1 + x2)
+            ym = DHALF * (y1 + y2)
+            zm = DZERO
+            call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
+                              conlen)
+            swa%di(ic) = conlen    ! kluge note: is this distance appropriate?
+            area = sqrt(dx * dx + dy * dy) * dz
+            swa%vi(ic) = q / area
+          else
+            ! -- top or bottom
+            iz = iz + 1
+            swa%diz(iz) = DHALF * dz      ! kluge note: is this distance appropriate?
+            area = this%dis%area(n)
+            if (icellface == this%xt3d%bff%max_faces - 1) then
+              ! -- bottom
+              swa%viz(ic) = q / area    ! kluge note: is the sign right?
+            else
+              ! -- top
+              swa%viz(ic) = -q / area   ! kluge note: is the sign right?
+            end if
+          end if
+        end if
+      end do
+      if (allocated(polyverts)) deallocate (polyverts)
       !
       ! -- Assign number of vertical and horizontal connections
       ncz = iz
@@ -2781,6 +2854,9 @@ contains
 
       ! Count internal model connections
       ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
+      
+      ! add bff faces
+      ic = ic + this%xt3d%bff%max_faces
 
       ! Add edge connections
       do m = 1, this%nedges

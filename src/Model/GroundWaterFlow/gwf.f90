@@ -378,8 +378,9 @@ contains
       allocate (this%gwfpackages(ip)%flow(nbound))
       this%gwfpackages(ip)%flow => packobj%simvals
     end do
-    allocate (this%npf%bff)
-    call this%npf%bff%bff_df(this%dis, this%nflowpack, this%gwfpackages)   ! ugly
+
+    allocate (this%npf%bff)   ! ugly
+    call this%npf%bff%bff_df(this%dis, this%nflowpack, this%gwfpackages)
     call this%npf%bff%bff_ar(this%ibound)
     this%npf%xt3d%bff => this%npf%bff
 
