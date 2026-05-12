@@ -383,6 +383,7 @@ contains
     call this%npf%bff%bff_df(this%dis, this%nflowpack, this%gwfpackages)
     call this%npf%bff%bff_ar(this%ibound)
     this%npf%xt3d%bff => this%npf%bff
+    this%npf%xt3d%ibff_xt3d => this%npf%isavsat   ! xt3d uses bff only if save_saturation option is on (hack)
 
   end subroutine gwf_ar
 

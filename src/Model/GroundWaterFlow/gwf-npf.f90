@@ -65,6 +65,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ithickstartflag => null() !< array of flags for handling the thickstrt option
     integer(I4B), pointer :: kluge_option => null() !< kluge option (set via xt3d rhs option)
     type(BffType), pointer :: bff => NULL() ! boundary-face flows object
+    integer(I4B), pointer :: ibff_spdis => NULL()
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous :: k11 => null() !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -1035,6 +1036,7 @@ contains
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%ixt3drhs)
     call mem_deallocate(this%kluge_option)     ! kluge option
+    call mem_deallocate(this%ibff_spdis)       ! kluge
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1119,6 +1121,7 @@ contains
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
     call mem_allocate(this%kluge_option, 'KLUGE_OPTION', this%memoryPath)   ! kluge_option
+    call mem_allocate(this%ibff_spdis, 'IBFFSPDIS', this%memoryPath)   ! kluge
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
@@ -1160,6 +1163,7 @@ contains
     this%ixt3d = 0
     this%ixt3drhs = 0
     this%kluge_option = 0   ! kluge option
+    this%ibff_spdis = 0   ! kluge
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1417,7 +1421,7 @@ contains
     ! -- xt3d active with rhs
     if (found%ixt3d .and. found%ixt3drhs) this%ixt3d = 2
     !
-    if (this%ixt3d == 2) then    ! kluge option passed in via x3td rhs option
+    if (this%ixt3d == 2) then    ! kluge option passed in via x3td rhs option (hack)
       this%ixt3d = 1
       this%ixt3drhs = 0
       this%kluge_option = 1
@@ -1513,6 +1517,8 @@ contains
           'option cannot be used when NEWTON option in not specified. '// &
           'Resetting HIGHEST_CELL_SATURATION option to off.'
         this%ihighcellsat = 0
+        allocate (this%ibff_spdis)
+        this%ibff_spdis = 1    ! kluge note: spdis uses bff only if highest_cell_saturation option is on (hack)
         call store_warning(warnmsg)
       end if
     end if
@@ -2631,6 +2637,7 @@ contains
       end if
       !
       ! add contribution from bff's
+      if (this%ibff_spdis /= 0) then
       call this%dis%get_polyverts(n, polyverts, closed=.true.)
       do icellface = 1, this%xt3d%bff%max_faces
         if (this%xt3d%bff%is_boundary_face(n, icellface)) then
@@ -2677,6 +2684,7 @@ contains
         end if
       end do
       if (allocated(polyverts)) deallocate (polyverts)
+      end if
       !
       ! -- Assign number of vertical and horizontal connections
       ncz = iz

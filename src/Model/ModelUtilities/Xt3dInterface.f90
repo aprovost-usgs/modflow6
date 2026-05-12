@@ -54,6 +54,7 @@ module Xt3dModule
     logical, pointer :: ldispersion => null() !< flag to indicate dispersion
     type(BffType), pointer :: bff => NULL() ! boundary-face flows object
     integer(I4B), pointer :: kluge_option => null() !< kluge option (set via xt3d rhs option)
+    integer(I4B), pointer ::ibff_xt3d => NULL()
 
   contains
 
@@ -453,8 +454,12 @@ contains
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
                           ck0, allhc0)
-      call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
-                                 vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
+      if (this%ibff_xt3d /= 0) then
+        call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
+                                   vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
+      else
+        nbff0 = 0
+      end if
       ! -- Loop over active neighbors of cell 0 that have a higher
       !    cell number (taking advantage of reciprocity).
       do il0 = 1, nnbr0
@@ -468,8 +473,12 @@ contains
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
                             ck1, allhc1)
-        call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
-                                   vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
+        if (this%ibff_xt3d /= 0) then
+          call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
+                                     vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
+        else
+          nbff1 = 0
+        end if
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
                                ii00, ii11, ii10)
@@ -941,8 +950,12 @@ contains
       ! -- Load conductivity and connection info for cell 0.
       call this%xt3d_load(nodes, n, nnbr0, inbr0, vc0, vn0, dl0, dl0n, &
                           ck0, allhc0)
-      call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
-                                 vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
+      if (this%ibff_xt3d /= 0) then
+        call this%xt3d_load_bfgrad(ck0, allhc0, nodes, n, nbff0, ibff0, &
+                                   vcbff0, vnbff0, dlbff0, dlbff0n, bfgrad0)
+      else
+        nbff0 = 0
+      end if
       !
       ! -- Loop over active neighbors of cell 0 that have a higher
       !    cell number (taking advantage of reciprocity).
@@ -956,8 +969,12 @@ contains
         ! -- Load conductivity and connection info for cell 1.
         call this%xt3d_load(nodes, m, nnbr1, inbr1, vc1, vn1, dl1, dl1n, &
                             ck1, allhc1)
-        call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
-                            vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
+        if (this%ibff_xt3d /= 0) then
+          call this%xt3d_load_bfgrad(ck1, allhc1, nodes, m, nbff1, ibff1, &
+                                     vcbff1, vnbff1, dlbff1, dlbff1n, bfgrad1)
+        else
+          nbff1 = 0
+        end if
         !
         ! -- Set various indices.
         call this%xt3d_indices(n, m, il0, ii01, jjs01, il01, il10, &
