@@ -401,6 +401,21 @@ pixi run build-mf5to6 builddir
 
 **Note:** If using Visual Studio Code, you can use tasks as described [here](.vscode/README.md) to automate the above.
 
+## Version string
+
+The version string displayed by `mf6 -v` and written to listing files is composed at build time from several components defined in `src/Utilities/version.f90.in`:
+
+- `VERSIONNUMBER`: the base version (e.g. `6.8.0.dev0`), manually maintained and set one minor release ahead of the last tag on the `develop` branch
+- `VERSIONVCSTAG`: a commit identifier suffix injected at build time (e.g. `+4d7f41ab`), or empty on official releases
+- `VERSIONTITLE`: the release date (e.g. ` 04/29/2026`) set by `update_version.py` for official releases, empty for development builds
+
+There is a "short" version string and a "full" version string, the former including only number and tag, the latter including all three parts.
+
+- `VERSION`: `VERSIONNUMBER` + `VERSIONVCSTAG` — used for the short `-v` display
+- `FULLVERSION`: `VERSIONNUMBER` + `VERSIONVCSTAG` + `VERSIONTITLE` — used for headers written to stdout and `.lst` files
+
+**Note**: the version string VCS tag mechanism only works with Meson. Visual Studio project files and makefiles reference a static `src/Utilities/version.f90` maintained alongside the `.in` template, so binaries built with Visual Studio or `make` will not include a VCS tag. The static file is kept in sync with the template by `update_version.py`, so only the template file requires manual editing.
+
 ## Formatting
 
 ### Spell checking
@@ -850,7 +865,7 @@ After running the reference and comparison models, the framework will try to fin
 
 ## Generating makefiles
 
-Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
+Makefiles are generated automatically during distribution and are not tracked in version control. The `distribution/build_makefiles.py` script uses [Pymake](https://github.com/modflowpy/pymake) to generate them. To regenerate and test makefiles locally:
 
 ```shell
 cd distribution/
@@ -879,7 +894,7 @@ pytest -v build_makefiles.py
 
 **Note**: `make` is required to test compiling MODFLOW 6 with makefiles. If `make` is not discovered on the system path, compile tests will be skipped.
 
-Makefiles may also be tested manually by changing to the appropriate `make` subdirectory (of the project root for MODFLOW 6, or inside the corresponding `utils` subdirectory for the zonebudget or converter utilities) and invoking `make` (`make clean` may first be necessary to remove previously created object files).
+Makefiles may also be tested manually by first generating them with `build_makefiles.py`, then changing to the appropriate `make` subdirectory (of the project root for MODFLOW 6, or inside the corresponding `utils` subdirectory for the zonebudget or converter utilities) and invoking `make` (`make clean` may first be necessary to remove previously created object files).
 
 ### Installing `make` on Windows
 
