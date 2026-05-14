@@ -66,6 +66,7 @@ module GwfNpfModule
     integer(I4B), pointer :: kluge_option => null() !< kluge option (set via xt3d rhs option)
     type(BffType), pointer :: bff => NULL() ! boundary-face flows object
     integer(I4B), pointer :: ibff_spdis => NULL()
+    integer(I4B), pointer :: ipwb_spdis => NULL()
     !
     ! K properties
     real(DP), dimension(:), pointer, contiguous :: k11 => null() !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
@@ -1037,6 +1038,7 @@ contains
     call mem_deallocate(this%ixt3drhs)
     call mem_deallocate(this%kluge_option)     ! kluge option
     call mem_deallocate(this%ibff_spdis)       ! kluge
+    call mem_deallocate(this%ipwb_spdis)       ! kluge
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1122,6 +1124,7 @@ contains
     call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
     call mem_allocate(this%kluge_option, 'KLUGE_OPTION', this%memoryPath)   ! kluge_option
     call mem_allocate(this%ibff_spdis, 'IBFFSPDIS', this%memoryPath)   ! kluge
+    call mem_allocate(this%ipwb_spdis, 'IPWBSPDIS', this%memoryPath)   ! kluge
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
@@ -1164,6 +1167,7 @@ contains
     this%ixt3drhs = 0
     this%kluge_option = 0   ! kluge option
     this%ibff_spdis = 0   ! kluge
+    this%ipwb_spdis = 0   ! kluge
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1521,6 +1525,11 @@ contains
         this%ibff_spdis = 1    ! kluge note: spdis uses bff only if highest_cell_saturation option is on (hack)
         call store_warning(warnmsg)
       end if
+    end if
+    
+    if (this%iperched > 0) then   ! kluge
+      allocate (this%ipwb_spdis)
+      this%ipwb_spdis = 1    ! kluge note: spdis uses pwb only if perched option is on (hack)
     end if
     !
     if (this%ixt3d /= 0) then
@@ -2477,6 +2486,7 @@ contains
     use SimModule, only: store_error
     use ConstantsModule, only: DPI
     use DisvGeom, only: line_unit_vector
+    use pw_basis_2d, only: projection_weighted_basis_2d
     ! -- dummy
     class(GwfNpfType) :: this
     real(DP), intent(in), dimension(:) :: flowja
@@ -2527,6 +2537,9 @@ contains
     real(DP) :: conlen
 !!    integer(I4B) :: nodeu, ncell2d, mcell2d, k
     real(DP) :: xm, ym, zm, q
+    real(DP), allocatable :: vorig(:, :)
+    real(DP) :: upwb(2, 2), uscl(2)
+    integer(I4B) :: info
     !
     ! -- Ensure dis has necessary information
     if (this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
@@ -2534,6 +2547,8 @@ contains
                        'discretization file.  ANGLDEGX required for '// &
                        'calculation of specific discharge.', terminate=.TRUE.)
     end if
+    
+    allocate (vorig(2, this%calc_max_conns()))
 
     swa => this%spdis_wa
     if (.not. swa%is_created()) then
@@ -2607,6 +2622,10 @@ contains
           else
             swa%vi(ic) = DZERO
           end if
+          if (n == 80) then   ! kluge debug
+            print *, ic, m, swa%nix(ic), swa%niy(ic)
+            print *, ic, m, flowja(ipos), area, swa%vi(ic)
+          end if
         end if
       end do
 
@@ -2655,8 +2674,9 @@ contains
             dy = y2 - y1
             ax = atan2(dx, -dy)
             if (ax < DZERO) ax = DTWO * DPI + ax
-            swa%nix(ic) = cos(ax)
-            swa%niy(ic) = sin(ax)
+            ! -- inward normal
+            swa%nix(ic) = -cos(ax)
+            swa%niy(ic) = -sin(ax)
             xn = this%dis%xc(n)
             yn = this%dis%yc(n)
             zn = DZERO
@@ -2714,6 +2734,34 @@ contains
       do iz = 1, ncz
         vz = vz + swa%wiz(iz) * swa%viz(iz)
       end do
+      !
+      if (this%ipwb_spdis /= 0) then    ! kluge
+      !
+      ! -- PWB approach for vx and vy
+      nc = ic
+      do ic = 1, nc
+!!        vorig(1, ic) = swa%nix(ic) * swa%vi(ic)
+!!        vorig(2, ic) = swa%niy(ic) * swa%vi(ic)
+        vorig(1, ic) = swa%nix(ic)
+        vorig(2, ic) = swa%niy(ic)
+      end do
+      call projection_weighted_basis_2d(vorig, swa%vi, nc, upwb, uscl, info)
+      if (info /= 0) stop "projection_weighted_basis_2d was unsuccessful"
+      nc = 2
+      vx = DZERO
+      vy = DZERO
+      do ic = 1, nc
+        swa%nix(ic) = upwb(1, ic)
+        swa%niy(ic) = upwb(2, ic)
+        swa%vi(ic) = uscl(ic)
+!!        vx = vx + swa%nix(ic) * swa%vi(ic)
+!!        vy = vy + swa%niy(ic) * swa%vi(ic)
+        vx = vx + upwb(1, ic) * uscl(ic)
+        vy = vy + upwb(2, ic) * uscl(ic)
+      end do
+      !
+!!      end if  ! kluge
+      else    ! kluge
       !
       ! -- distance-based weighting
       nc = ic
@@ -2777,11 +2825,19 @@ contains
         vy = vy / denom
       end if
       !
+      end if    ! kluge
+      !
       this%spdis(1, n) = vx
       this%spdis(2, n) = vy
       this%spdis(3, n) = vz
+      if (n == 80) then
+        print *, vx, vy   ! kluge debug
+!!        pause
+      end if
       !
     end do
+    
+    deallocate (vorig)
 
   end subroutine calc_spdis
 
