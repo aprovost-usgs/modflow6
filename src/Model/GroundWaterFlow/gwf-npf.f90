@@ -2622,10 +2622,10 @@ contains
           else
             swa%vi(ic) = DZERO
           end if
-          if (n == 80) then   ! kluge debug
-            print *, ic, m, swa%nix(ic), swa%niy(ic)
-            print *, ic, m, flowja(ipos), area, swa%vi(ic)
-          end if
+!!          if (n == 80) then   ! kluge debug
+!!            print *, ic, m, swa%nix(ic), swa%niy(ic)
+!!            print *, ic, m, flowja(ipos), area, swa%vi(ic)
+!!          end if
         end if
       end do
 
@@ -2830,10 +2830,10 @@ contains
       this%spdis(1, n) = vx
       this%spdis(2, n) = vy
       this%spdis(3, n) = vz
-      if (n == 80) then
-        print *, vx, vy   ! kluge debug
+!!      if (n == 80) then
+!!        print *, vx, vy   ! kluge debug
 !!        pause
-      end if
+!!      end if
       !
     end do
     
