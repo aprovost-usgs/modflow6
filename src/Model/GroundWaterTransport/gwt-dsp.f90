@@ -737,6 +737,7 @@ contains
         else
           this%angle1(n) = acos(a)
         end if
+        this%angle1(n) = sign(this%angle1(n), qy)   ! kluge note: dispersion fix
         !
       end if
     end do

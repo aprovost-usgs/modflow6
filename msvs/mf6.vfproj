@@ -38,8 +38,8 @@
 			<Tool Name="VFPostBuildEventTool"/>
 			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
 		</Configuration>
-		<Configuration Name="Release|x64" UseCompiler="ifortCompiler" OutputDirectory="../bin/" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" HeapArrays="0" Preprocess="preprocessYes" OptDiagFile="optrpt" FloatingPointExceptionHandling="fpe0"/>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="../bin/" IntermediateDirectory="obj_temp\$(ProjectName)\$(PlatformName)\$(ConfigurationName)">
+			<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Qmkl:sequential" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" HeapArrays="0" Preprocess="preprocessYes" OptDiagFile="optrpt" FloatingPointExceptionHandling="fpe0"/>
 			<Tool Name="VFLinkerTool" AdditionalOptions="/verbose:lib" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" IgnoreDefaultLibraryNames="LIBCMTD" GenerateDebugInformation="true" ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb" SubSystem="subSystemConsole"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
